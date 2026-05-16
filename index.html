@@ -1,1713 +1,1023 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id" class="light">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MealSnap - Jurnal Makanan Pribadi</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Tambahan Leaflet untuk Peta -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['"Plus Jakarta Sans"', "sans-serif"],
-            },
-            colors: {
-              primary: "#7da186" /* Sage Green yang menenangkan */,
-              primaryDark: "#608068",
-              bgLight: "#fdfcf9" /* Warm ivory / Off-white */,
-              bgDark: "#262523" /* Cokelat keabuan gelap, bukan hitam pekat */,
-              cardLight: "#ffffff",
-              cardDark: "#302f2d",
-            },
-          },
-        },
-      };
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#7da186', /* Sage Green yang menenangkan */
+                        primaryDark: '#608068',
+                        bgLight: '#fdfcf9', /* Warm ivory / Off-white */
+                        bgDark: '#262523', /* Cokelat keabuan gelap, bukan hitam pekat */
+                        cardLight: '#ffffff',
+                        cardDark: '#302f2d'
+                    }
+                }
+            }
+        }
     </script>
     <style>
-      /* Hide scrollbar for clean UI but allow scrolling */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-      }
-      .dark ::-webkit-scrollbar-thumb {
-        background: #475569;
-      }
+        /* Hide scrollbar for clean UI but allow scrolling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
 
-      /* Pinterest-style Masonry Layout */
-      .masonry-grid {
-        column-count: 2; /* Mobile default: 2 kolom */
-        column-gap: 0.75rem; /* Gap diperkecil untuk mobile */
-      }
-      @media (min-width: 640px) {
+        /* Pinterest-style Masonry Layout */
         .masonry-grid {
-          column-gap: 1.5rem; /* Kembalikan gap standar di layar lebih besar */
+            column-count: 2; /* Mobile default: 2 kolom */
+            column-gap: 0.75rem; /* Gap diperkecil untuk mobile */
         }
-      }
-      @media (min-width: 1024px) {
-        .masonry-grid {
-          column-count: 3;
+        @media (min-width: 640px) { 
+            .masonry-grid { 
+                column-gap: 1.5rem; /* Kembalikan gap standar di layar lebih besar */
+            } 
         }
-      }
-      @media (min-width: 1280px) {
-        .masonry-grid {
-          column-count: 4;
-        }
-      }
-
-      .masonry-item {
-        break-inside: avoid;
-        margin-bottom: 0.75rem; /* Sesuaikan dengan gap vertikal di mobile */
-      }
-      @media (min-width: 640px) {
+        @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
+        @media (min-width: 1280px) { .masonry-grid { column-count: 4; } }
+        
         .masonry-item {
-          margin-bottom: 1.5rem;
+            break-inside: avoid;
+            margin-bottom: 0.75rem; /* Sesuaikan dengan gap vertikal di mobile */
         }
-      }
+        @media (min-width: 640px) {
+            .masonry-item {
+                margin-bottom: 1.5rem;
+            }
+        }
 
-      /* Modal Transitions */
-      .modal-overlay {
-        backdrop-filter: blur(5px);
-      }
+        /* Modal Transitions */
+        .modal-overlay {
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Smooth category filtering */
+        .meal-card {
+            transition: all 0.4s ease-out;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .meal-card.hide {
+            display: none;
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        
+        /* Animasi Gelembung Kategori */
+        .bubble-pop {
+            animation: bubble 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes bubble {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            75% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
 
-      /* Smooth category filtering */
-      .meal-card {
-        transition: all 0.4s ease-out;
-        opacity: 1;
-        transform: scale(1);
-      }
-      .meal-card.hide {
-        display: none;
-        opacity: 0;
-        transform: scale(0.9);
-      }
-
-      /* Animasi Gelembung Kategori */
-      .bubble-pop {
-        animation: bubble 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      }
-      @keyframes bubble {
-        0% {
-          transform: scale(1);
+        /* Animasi Mengambang untuk Hero Icon */
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
         }
-        50% {
-          transform: scale(0.95);
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
         }
-        75% {
-          transform: scale(1.05);
+        
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #ff6b6b;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
         }
-        100% {
-          transform: scale(1);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-      }
-
-      /* Animasi Mengambang untuk Hero Icon */
-      .animate-float {
-        animation: float 6s ease-in-out infinite;
-      }
-      @keyframes float {
-        0% {
-          transform: translateY(0px);
-        }
-        50% {
-          transform: translateY(-15px);
-        }
-        100% {
-          transform: translateY(0px);
-        }
-      }
-
-      /* Loader */
-      .loader {
-        border: 3px solid #f3f3f3;
-        border-radius: 50%;
-        border-top: 3px solid #ff6b6b;
-        width: 24px;
-        height: 24px;
-        -webkit-animation: spin 1s linear infinite; /* Safari */
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
     </style>
-  </head>
-  <body
-    class="bg-gradient-to-br from-[#fdfcf9] via-[#f0f4f1] to-[#e3eae5] dark:from-[#262523] dark:via-[#222422] dark:to-[#1a1b1a] bg-fixed text-stone-700 dark:text-stone-300 transition-colors duration-300 min-h-screen"
-  >
-    <nav
-      class="sticky top-0 z-40 bg-gradient-to-r from-stone-50/90 to-primary/10 dark:from-stone-900/90 dark:to-primaryDark/20 backdrop-blur-md border-b border-stone-200/50 dark:border-stone-700/50 shadow-sm"
-    >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <!-- Logo -->
-          <div
-            class="flex-shrink-0 flex items-center gap-2 cursor-pointer"
-            onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
-          >
-            <div
-              class="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-2xl flex items-center justify-center text-primaryDark dark:text-primary font-bold text-xl transition-all shadow-inner"
-            >
-              <i class="fa-solid fa-bowl-food"></i>
-            </div>
-            <span
-              class="font-bold text-xl tracking-tight hidden sm:block text-stone-800 dark:text-stone-100"
-              >MealSnap</span
-            >
-          </div>
+</head>
+<body class="bg-gradient-to-br from-[#fdfcf9] via-[#f0f4f1] to-[#e3eae5] dark:from-[#262523] dark:via-[#222422] dark:to-[#1a1b1a] bg-fixed text-stone-700 dark:text-stone-300 transition-colors duration-300 min-h-screen">
 
-          <!-- Search Bar -->
-          <div class="flex-1 max-w-md px-4 hidden" id="searchContainer">
-            <div class="relative">
-              <div
-                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-              >
-                <i class="fa-solid fa-magnifying-glass text-stone-400"></i>
-              </div>
-              <input
-                type="text"
-                id="searchInput"
-                placeholder="Cari momen makanan..."
-                class="block w-full pl-10 pr-3 py-2 border border-stone-200 dark:border-stone-700/50 rounded-full bg-white dark:bg-cardDark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition text-sm"
-              />
-            </div>
-          </div>
-
-          <!-- Right Actions -->
-          <div class="flex items-center gap-2 sm:gap-4">
-            <button
-              id="themeToggle"
-              class="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 transition text-stone-500 dark:text-stone-400"
-            >
-              <i class="fa-solid fa-moon text-xl" id="themeIcon"></i>
-            </button>
-
-            <!-- Auth Section -->
-            <div id="authSection" class="hidden">
-              <button
-                id="loginBtn"
-                class="bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 px-5 py-2 rounded-full font-medium text-sm hover:opacity-90 transition"
-              >
-                Masuk
-              </button>
-            </div>
-
-            <div id="userSection" class="hidden items-center gap-3">
-              <button
-                id="recapBtn"
-                class="bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 w-10 h-10 sm:w-auto sm:px-4 sm:h-10 rounded-full font-medium text-sm transition flex items-center justify-center gap-2"
-              >
-                <i class="fa-solid fa-leaf"></i>
-                <span class="hidden sm:block">Rekap</span>
-              </button>
-              <button
-                id="addBtn"
-                class="bg-primary hover:bg-primaryDark text-white w-10 h-10 sm:w-auto sm:px-4 sm:h-10 rounded-full font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm"
-              >
-                <i class="fa-solid fa-plus"></i>
-                <span class="hidden sm:block">Catat Momen</span>
-              </button>
-              <div class="relative group">
-                <div
-                  class="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full border-2 border-white dark:border-slate-800 cursor-pointer flex items-center justify-center text-white font-bold"
-                  id="userAvatar"
-                >
-                  U
+    <nav class="sticky top-0 z-40 bg-gradient-to-r from-stone-50/90 to-primary/10 dark:from-stone-900/90 dark:to-primaryDark/20 backdrop-blur-md border-b border-stone-200/50 dark:border-stone-700/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                    <div class="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-2xl flex items-center justify-center text-primaryDark dark:text-primary font-bold text-xl transition-all shadow-inner">
+                        <i class="fa-solid fa-bowl-food"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight hidden sm:block text-stone-800 dark:text-stone-100">MealSnap</span>
                 </div>
-                <!-- Dropdown -->
-                <div
-                  class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
-                >
-                  <div
-                    class="px-4 py-3 border-b border-gray-100 dark:border-slate-700"
-                  >
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                      Masuk sebagai
-                    </p>
-                    <p class="text-sm font-medium truncate" id="userEmail">
-                      user@example.com
-                    </p>
-                  </div>
-                  <div class="p-1">
-                    <button
-                      id="logoutBtn"
-                      class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition"
-                    >
-                      <i class="fa-solid fa-right-from-bracket mr-2"></i>Keluar
+
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-md px-4 hidden" id="searchContainer">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-magnifying-glass text-stone-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Cari momen makanan..." class="block w-full pl-10 pr-3 py-2 border border-stone-200 dark:border-stone-700/50 rounded-full bg-white dark:bg-cardDark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition text-sm">
+                    </div>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 transition text-stone-500 dark:text-stone-400">
+                        <i class="fa-solid fa-moon text-xl" id="themeIcon"></i>
                     </button>
-                  </div>
+                    
+                    <!-- Auth Section -->
+                    <div id="authSection" class="hidden">
+                        <button id="loginBtn" class="bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 px-5 py-2 rounded-full font-medium text-sm hover:opacity-90 transition">Masuk</button>
+                    </div>
+                    
+                    <div id="userSection" class="hidden items-center gap-3">
+                        <button id="recapBtn" class="bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 w-10 h-10 sm:w-auto sm:px-4 sm:h-10 rounded-full font-medium text-sm transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-leaf"></i>
+                            <span class="hidden sm:block">Rekap</span>
+                        </button>
+                        <button id="addBtn" class="bg-primary hover:bg-primaryDark text-white w-10 h-10 sm:w-auto sm:px-4 sm:h-10 rounded-full font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-plus"></i>
+                            <span class="hidden sm:block">Catat Momen</span>
+                        </button>
+                        <div class="relative group">
+                            <div class="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full border-2 border-white dark:border-slate-800 cursor-pointer flex items-center justify-center text-white font-bold" id="userAvatar">U</div>
+                            <!-- Dropdown -->
+                            <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Masuk sebagai</p>
+                                    <p class="text-sm font-medium truncate" id="userEmail">user@example.com</p>
+                                </div>
+                                <div class="p-1">
+                                    <button id="logoutBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition">
+                                        <i class="fa-solid fa-right-from-bracket mr-2"></i>Keluar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Mobile Search (Visible only on small screens) -->
-        <div class="pb-3 md:hidden hidden" id="mobileSearchContainer">
-          <div class="relative">
-            <div
-              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-            >
-              <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+            
+            <!-- Mobile Search (Visible only on small screens) -->
+            <div class="pb-3 md:hidden hidden" id="mobileSearchContainer">
+                 <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="mobileSearchInput" placeholder="Cari makanan..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm">
+                </div>
             </div>
-            <input
-              type="text"
-              id="mobileSearchInput"
-              placeholder="Cari makanan..."
-              class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm"
-            />
-          </div>
         </div>
-      </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-      <!-- Auth Landing Page (Shown when not logged in) -->
-      <div
-        id="landingView"
-        class="hidden flex flex-col items-center justify-center min-h-[70vh] text-center pt-6 sm:pt-8 pb-12 sm:pb-16 px-2 sm:px-0"
-      >
-        <!-- Hero Section -->
-        <div
-          class="w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6 sm:mb-8 shadow-inner animate-float relative"
-        >
-          <div
-            class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-100 rounded-full flex items-center justify-center animate-pulse"
-          >
-            <i
-              class="fa-solid fa-star text-[10px] sm:text-xs text-yellow-500"
-            ></i>
-          </div>
-          <i
-            class="fa-solid fa-bowl-food text-3xl sm:text-4xl text-primary"
-          ></i>
-        </div>
-
-        <h1
-          class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 text-stone-800 dark:text-stone-100 tracking-tight leading-tight"
-        >
-          Jurnal Makanan <br class="block sm:hidden" /><span
-            class="text-primary relative inline-block mt-1 sm:mt-0"
-            >Mindful<svg
-              class="absolute w-full h-2 sm:h-3 -bottom-0.5 sm:-bottom-1 left-0 text-primary/30"
-              viewBox="0 0 100 10"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M0 5 Q 50 10 100 5"
-                stroke="currentColor"
-                stroke-width="4"
-                fill="transparent"
-              /></svg
-          ></span>
-        </h1>
-        <p
-          class="text-base sm:text-lg md:text-xl text-stone-500 dark:text-stone-400 max-w-2xl mb-8 sm:mb-10 leading-relaxed px-2"
-        >
-          Hargai setiap suapan, catat setiap momen. Sebuah ruang tenang untuk
-          mengapresiasi perjalanan kuliner dan keseharianmu.
-        </p>
-
-        <button
-          id="getStartedBtn"
-          class="bg-primary hover:bg-primaryDark text-white w-full max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3.5 rounded-full font-bold text-base sm:text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 mx-auto"
-        >
-          Mulai Mencatat <i class="fa-solid fa-arrow-right"></i>
-        </button>
-
-        <!-- Badges -->
-        <div
-          class="flex flex-wrap justify-center gap-2 sm:gap-3 mt-8 mb-16 sm:mb-20"
-        >
-          <div
-            class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"
-          >
-            <i class="fa-solid fa-cloud-arrow-up text-primary"></i>
-            <span class="whitespace-nowrap">Tersimpan Aman</span>
-          </div>
-          <div
-            class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"
-          >
-            <i class="fa-solid fa-map-location-dot text-blue-500"></i>
-            <span class="whitespace-nowrap">Integrasi Maps</span>
-          </div>
-          <div
-            class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"
-          >
-            <i class="fa-solid fa-share-nodes text-green-500"></i>
-            <span class="whitespace-nowrap">Mudah Dibagikan</span>
-          </div>
-        </div>
-
-        <!-- Penjelasan Fitur Aplikasi -->
-        <div
-          class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 max-w-5xl mx-auto w-full mb-16 sm:mb-24 px-2 sm:px-0"
-        >
-          <!-- Card 1 -->
-          <div
-            class="bg-white/60 dark:bg-cardDark/60 p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group flex flex-col items-center sm:items-start text-center sm:text-left"
-          >
-            <div
-              class="w-10 h-10 sm:w-14 sm:h-14 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"
-            >
-              <i class="fa-solid fa-camera"></i>
+        
+        <!-- Auth Landing Page (Shown when not logged in) -->
+        <div id="landingView" class="hidden flex flex-col items-center justify-center min-h-[70vh] text-center pt-6 sm:pt-8 pb-12 sm:pb-16 px-2 sm:px-0">
+            
+            <!-- Hero Section -->
+            <div class="w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6 sm:mb-8 shadow-inner animate-float relative">
+                <div class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-100 rounded-full flex items-center justify-center animate-pulse"><i class="fa-solid fa-star text-[10px] sm:text-xs text-yellow-500"></i></div>
+                <i class="fa-solid fa-bowl-food text-3xl sm:text-4xl text-primary"></i>
             </div>
-            <h3
-              class="font-bold text-sm sm:text-xl mb-1.5 sm:mb-3 text-stone-800 dark:text-stone-100"
-            >
-              Abadikan Momen
-            </h3>
-            <p
-              class="text-[11px] sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-4 sm:line-clamp-none"
-            >
-              Simpan foto makanan favoritmu lengkap dengan rating, harga, dan
-              catatan rasa agar memori tidak terlupa.
-            </p>
-          </div>
+            
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 text-stone-800 dark:text-stone-100 tracking-tight leading-tight">Jurnal Makanan <br class="block sm:hidden"><span class="text-primary relative inline-block mt-1 sm:mt-0">Mindful<svg class="absolute w-full h-2 sm:h-3 -bottom-0.5 sm:-bottom-1 left-0 text-primary/30" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" stroke-width="4" fill="transparent"/></svg></span></h1>
+            <p class="text-base sm:text-lg md:text-xl text-stone-500 dark:text-stone-400 max-w-2xl mb-8 sm:mb-10 leading-relaxed px-2">Hargai setiap suapan, catat setiap momen. Sebuah ruang tenang untuk mengapresiasi perjalanan kuliner dan keseharianmu.</p>
+            
+            <button id="getStartedBtn" class="bg-primary hover:bg-primaryDark text-white w-full max-w-[280px] sm:max-w-none sm:w-auto px-8 py-3.5 rounded-full font-bold text-base sm:text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 mx-auto">
+                Mulai Mencatat <i class="fa-solid fa-arrow-right"></i>
+            </button>
 
-          <!-- Card 2 -->
-          <div
-            class="bg-white/60 dark:bg-cardDark/60 p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group mt-0 md:mt-8 flex flex-col items-center sm:items-start text-center sm:text-left"
-          >
-            <div
-              class="w-10 h-10 sm:w-14 sm:h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"
-            >
-              <i class="fa-solid fa-location-dot"></i>
+            <!-- Badges -->
+            <div class="flex flex-wrap justify-center gap-2 sm:gap-3 mt-8 mb-16 sm:mb-20">
+                <div class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"><i class="fa-solid fa-cloud-arrow-up text-primary"></i> <span class="whitespace-nowrap">Tersimpan Aman</span></div>
+                <div class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"><i class="fa-solid fa-map-location-dot text-blue-500"></i> <span class="whitespace-nowrap">Integrasi Maps</span></div>
+                <div class="px-3 py-1.5 sm:px-4 sm:py-1.5 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-300 text-[10px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 border border-stone-200 dark:border-stone-700"><i class="fa-solid fa-share-nodes text-green-500"></i> <span class="whitespace-nowrap">Mudah Dibagikan</span></div>
             </div>
-            <h3
-              class="font-bold text-sm sm:text-xl mb-1.5 sm:mb-3 text-stone-800 dark:text-stone-100"
-            >
-              Jejak Kuliner
-            </h3>
-            <p
-              class="text-[11px] sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-4 sm:line-clamp-none"
-            >
-              Tandai lokasi restoran atau kafe tempatmu makan, terintegrasi
-              langsung dengan Maps untuk dikunjungi lagi nanti.
-            </p>
-          </div>
-
-          <!-- Card 3 (Full width on mobile, 1 column on desktop) -->
-          <div
-            class="col-span-2 md:col-span-1 bg-white/60 dark:bg-cardDark/60 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group flex flex-col items-center sm:items-start text-center sm:text-left"
-          >
-            <div
-              class="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"
-            >
-              <i class="fa-solid fa-share-nodes"></i>
-            </div>
-            <h3
-              class="font-bold text-base sm:text-xl mb-2 sm:mb-3 text-stone-800 dark:text-stone-100"
-            >
-              Bagikan Cerita
-            </h3>
-            <p
-              class="text-xs sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed"
-            >
-              Buat jurnal makanan yang rapi lalu bagikan seketika ke teman dan
-              keluargamu dalam format yang estetik.
-            </p>
-          </div>
-        </div>
-
-        <!-- Testimonials Section -->
-        <div
-          class="w-full max-w-5xl mx-auto text-left border-t border-stone-200 dark:border-stone-800 pt-12 sm:pt-16"
-        >
-          <div class="text-center mb-8 sm:mb-10">
-            <h2
-              class="text-2xl sm:text-3xl font-bold text-stone-800 dark:text-stone-100 mb-2 sm:mb-3"
-            >
-              Disukai oleh Para Foodies
-            </h2>
-            <p class="text-sm sm:text-base text-stone-500 dark:text-stone-400">
-              Bergabung dengan pengguna lain yang telah merapikan memori
-              kulinernya.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-            <div
-              class="bg-white dark:bg-cardDark p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 relative overflow-hidden flex flex-col items-center sm:items-start text-center sm:text-left"
-            >
-              <i
-                class="fa-solid fa-quote-right absolute text-5xl sm:text-6xl text-stone-100 dark:text-stone-800/50 -bottom-2 -right-2"
-              ></i>
-              <div
-                class="flex items-center gap-1 text-yellow-400 mb-3 sm:mb-4 text-xs sm:text-sm"
-              >
-                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
-                ><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
-                ><i class="fa-solid fa-star"></i>
-              </div>
-              <p
-                class="text-sm sm:text-base text-stone-600 dark:text-stone-300 italic mb-5 sm:mb-6 relative z-10 leading-relaxed"
-              >
-                "Fitur petanya luar biasa! Aku sering lupa nama warung-warung
-                kecil enak di Kendari, sekarang tinggal buka MealSnap dan
-                langsung ketemu lokasinya."
-              </p>
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center text-sm sm:text-base"
-                >
-                  S
+            
+            <!-- Penjelasan Fitur Aplikasi -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 max-w-5xl mx-auto w-full mb-16 sm:mb-24 px-2 sm:px-0">
+                
+                <!-- Card 1 -->
+                <div class="bg-white/60 dark:bg-cardDark/60 p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group flex flex-col items-center sm:items-start text-center sm:text-left">
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-camera"></i></div>
+                    <h3 class="font-bold text-sm sm:text-xl mb-1.5 sm:mb-3 text-stone-800 dark:text-stone-100">Abadikan Momen</h3>
+                    <p class="text-[11px] sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-4 sm:line-clamp-none">Simpan foto makanan favoritmu lengkap dengan rating, harga, dan catatan rasa agar memori tidak terlupa.</p>
                 </div>
-                <div class="text-left">
-                  <p
-                    class="font-bold text-stone-800 dark:text-stone-100 text-sm"
-                  >
-                    Shofiyatul F.
-                  </p>
-                  <p class="text-[11px] sm:text-xs text-stone-500">Mahasiswi</p>
+                
+                <!-- Card 2 -->
+                <div class="bg-white/60 dark:bg-cardDark/60 p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group mt-0 md:mt-8 flex flex-col items-center sm:items-start text-center sm:text-left">
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-location-dot"></i></div>
+                    <h3 class="font-bold text-sm sm:text-xl mb-1.5 sm:mb-3 text-stone-800 dark:text-stone-100">Jejak Kuliner</h3>
+                    <p class="text-[11px] sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-4 sm:line-clamp-none">Tandai lokasi restoran atau kafe tempatmu makan, terintegrasi langsung dengan Maps untuk dikunjungi lagi nanti.</p>
                 </div>
-              </div>
+                
+                <!-- Card 3 (Full width on mobile, 1 column on desktop) -->
+                <div class="col-span-2 md:col-span-1 bg-white/60 dark:bg-cardDark/60 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-stone-100 dark:border-stone-800 shadow-sm backdrop-blur-sm hover:shadow-md transition duration-300 group flex flex-col items-center sm:items-start text-center sm:text-left">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-share-nodes"></i></div>
+                    <h3 class="font-bold text-base sm:text-xl mb-2 sm:mb-3 text-stone-800 dark:text-stone-100">Bagikan Cerita</h3>
+                    <p class="text-xs sm:text-base text-stone-500 dark:text-stone-400 leading-relaxed">Buat jurnal makanan yang rapi lalu bagikan seketika ke teman dan keluargamu dalam format yang estetik.</p>
+                </div>
+
             </div>
 
-            <div
-              class="bg-white dark:bg-cardDark p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 relative overflow-hidden flex flex-col items-center sm:items-start text-center sm:text-left"
-            >
-              <i
-                class="fa-solid fa-quote-right absolute text-5xl sm:text-6xl text-stone-100 dark:text-stone-800/50 -bottom-2 -right-2"
-              ></i>
-              <div
-                class="flex items-center gap-1 text-yellow-400 mb-3 sm:mb-4 text-xs sm:text-sm"
-              >
-                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
-                ><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
-                ><i class="fa-solid fa-star"></i>
-              </div>
-              <p
-                class="text-sm sm:text-base text-stone-600 dark:text-stone-300 italic mb-5 sm:mb-6 relative z-10 leading-relaxed"
-              >
-                "Desainnya bersih dan sangat menenangkan. Cocok banget buat
-                nyimpen rekam jejak diet dan rating harga makanan pas lagi
-                kulineran akhir pekan."
-              </p>
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 sm:w-10 sm:h-10 bg-rose-100 text-rose-600 font-bold rounded-full flex items-center justify-center text-sm sm:text-base"
-                >
-                  A
+            <!-- Testimonials Section -->
+            <div class="w-full max-w-5xl mx-auto text-left border-t border-stone-200 dark:border-stone-800 pt-12 sm:pt-16">
+                <div class="text-center mb-8 sm:mb-10">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-stone-800 dark:text-stone-100 mb-2 sm:mb-3">Disukai oleh Para Foodies</h2>
+                    <p class="text-sm sm:text-base text-stone-500 dark:text-stone-400">Bergabung dengan pengguna lain yang telah merapikan memori kulinernya.</p>
                 </div>
-                <div class="text-left">
-                  <p
-                    class="font-bold text-stone-800 dark:text-stone-100 text-sm"
-                  >
-                    Alam
-                  </p>
-                  <p class="text-[11px] sm:text-xs text-stone-500">
-                    Mahasiswa
-                  </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                    <div class="bg-white dark:bg-cardDark p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 relative overflow-hidden flex flex-col items-center sm:items-start text-center sm:text-left">
+                        <i class="fa-solid fa-quote-right absolute text-5xl sm:text-6xl text-stone-100 dark:text-stone-800/50 -bottom-2 -right-2"></i>
+                        <div class="flex items-center gap-1 text-yellow-400 mb-3 sm:mb-4 text-xs sm:text-sm">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="text-sm sm:text-base text-stone-600 dark:text-stone-300 italic mb-5 sm:mb-6 relative z-10 leading-relaxed">"Fitur petanya luar biasa! Aku sering lupa nama warung-warung kecil enak di Kendari, sekarang tinggal buka MealSnap dan langsung ketemu lokasinya."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-600 font-bold rounded-full flex items-center justify-center text-sm sm:text-base">S</div>
+                            <div class="text-left">
+                                <p class="font-bold text-stone-800 dark:text-stone-100 text-sm">Sopi</p>
+                                <p class="text-[11px] sm:text-xs text-stone-500">Mahasiswi</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-cardDark p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 relative overflow-hidden flex flex-col items-center sm:items-start text-center sm:text-left">
+                        <i class="fa-solid fa-quote-right absolute text-5xl sm:text-6xl text-stone-100 dark:text-stone-800/50 -bottom-2 -right-2"></i>
+                        <div class="flex items-center gap-1 text-yellow-400 mb-3 sm:mb-4 text-xs sm:text-sm">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="text-sm sm:text-base text-stone-600 dark:text-stone-300 italic mb-5 sm:mb-6 relative z-10 leading-relaxed">"Desainnya bersih dan sangat menenangkan. Cocok banget buat nyimpen rekam jejak diet dan rating harga makanan pas lagi kulineran akhir pekan."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-rose-100 text-rose-600 font-bold rounded-full flex items-center justify-center text-sm sm:text-base">A</div>
+                            <div class="text-left">
+                                <p class="font-bold text-stone-800 dark:text-stone-100 text-sm">Alam</p>
+                                <p class="text-[11px] sm:text-xs text-stone-500">Mahasiswa</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Main Content (Shown when logged in) -->
-      <div id="mainContentView" class="hidden">
-        <!-- Filters -->
-        <div
-          class="flex overflow-x-auto pt-2 pb-4 mb-6 hide-scrollbar gap-2 px-2 -mt-2"
-          id="categoryFilters"
-        >
-          <button
-            data-filter="all"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-primary text-white dark:bg-primaryDark transition-all duration-300 shadow-lg shadow-primary/30"
-          >
-            Semua
-          </button>
-          <button
-            data-filter="favorites"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            <i class="fa-solid fa-heart text-red-500 mr-1"></i> Favorit
-          </button>
-          <button
-            data-filter="breakfast"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            🥞 Sarapan
-          </button>
-          <button
-            data-filter="lunch"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            🍱 Makan Siang
-          </button>
-          <button
-            data-filter="dinner"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            🍝 Makan Malam
-          </button>
-          <button
-            data-filter="snack"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            🍿 Cemilan
-          </button>
-          <button
-            data-filter="drinks"
-            class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"
-          >
-            🧋 Minuman
-          </button>
         </div>
 
-        <!-- Stats/Header -->
-        <div class="mb-6 flex justify-between items-end">
-          <div>
-            <h2 class="text-2xl font-bold" id="feedTitle">Galeri Kamu</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400" id="mealCount">
-              0 catatan makanan
-            </p>
-          </div>
-        </div>
+        <!-- Main Content (Shown when logged in) -->
+        <div id="mainContentView" class="hidden">
+            <!-- Filters -->
+            <div class="flex overflow-x-auto pt-2 pb-4 mb-6 hide-scrollbar gap-2 px-2 -mt-2" id="categoryFilters">
+                <button data-filter="all" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-primary text-white dark:bg-primaryDark transition-all duration-300 shadow-lg shadow-primary/30">Semua</button>
+                <button data-filter="favorites" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300"><i class="fa-solid fa-heart text-red-500 mr-1"></i> Favorit</button>
+                <button data-filter="breakfast" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300">🥞 Sarapan</button>
+                <button data-filter="lunch" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300">🍱 Makan Siang</button>
+                <button data-filter="dinner" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300">🍝 Makan Malam</button>
+                <button data-filter="snack" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300">🍿 Cemilan</button>
+                <button data-filter="drinks" class="filter-btn px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 dark:bg-cardDark dark:text-stone-300 dark:border-stone-700/50 dark:hover:bg-stone-800 transition-all duration-300">🧋 Minuman</button>
+            </div>
 
-        <!-- Loader for Feed -->
-        <div id="feedLoader" class="flex justify-center py-12 hidden">
-          <div class="loader"></div>
-        </div>
+            <!-- Stats/Header -->
+            <div class="mb-6 flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-bold" id="feedTitle">Galeri Kamu</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" id="mealCount">0 catatan makanan</p>
+                </div>
+            </div>
 
-        <!-- Empty State -->
-        <div
-          id="emptyState"
-          class="hidden flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl"
-        >
-          <i
-            class="fa-solid fa-plate-wheat text-6xl text-gray-300 dark:text-slate-600 mb-4"
-          ></i>
-          <h3 class="text-xl font-bold mb-2">Belum ada makanan</h3>
-          <p class="text-gray-500 dark:text-gray-400 max-w-sm mb-6">
-            Sepertinya kamu belum memposting apapun di kategori ini.
-          </p>
-          <button
-            onclick="document.getElementById('addBtn').click()"
-            class="bg-primary/10 text-primary font-medium px-6 py-2 rounded-full hover:bg-primary/20 transition"
-          >
-            Post Foto Pertamamu
-          </button>
-        </div>
+            <!-- Loader for Feed -->
+            <div id="feedLoader" class="flex justify-center py-12 hidden">
+                <div class="loader"></div>
+            </div>
 
-        <!-- Masonry Grid -->
-        <div id="mealGrid" class="masonry-grid">
-          <!-- Cards will be injected here via JS -->
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl">
+                <i class="fa-solid fa-plate-wheat text-6xl text-gray-300 dark:text-slate-600 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Belum ada makanan</h3>
+                <p class="text-gray-500 dark:text-gray-400 max-w-sm mb-6">Sepertinya kamu belum memposting apapun di kategori ini.</p>
+                <button onclick="document.getElementById('addBtn').click()" class="bg-primary/10 text-primary font-medium px-6 py-2 rounded-full hover:bg-primary/20 transition">Post Foto Pertamamu</button>
+            </div>
+
+            <!-- Masonry Grid -->
+            <div id="mealGrid" class="masonry-grid">
+                <!-- Cards will be injected here via JS -->
+            </div>
         </div>
-      </div>
     </main>
 
     <!-- Add/Edit Modal -->
-    <div
-      id="mealModal"
-      class="fixed inset-0 z-50 hidden modal-overlay bg-black/60 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-95 opacity-0 h-auto max-h-[95vh] flex flex-col"
-        id="mealModalContent"
-      >
-        <div
-          class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-cardDark z-10"
-        >
-          <h3 class="text-xl font-bold" id="modalTitle">Tambah Catatan Baru</h3>
-          <button
-            id="closeModalBtn"
-            class="text-gray-400 hover:text-gray-700 dark:hover:text-white transition"
-          >
-            <i class="fa-solid fa-xmark text-xl"></i>
-          </button>
-        </div>
+    <div id="mealModal" class="fixed inset-0 z-50 hidden modal-overlay bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-95 opacity-0 h-auto max-h-[95vh] flex flex-col" id="mealModalContent">
+            
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-cardDark z-10">
+                <h3 class="text-xl font-bold" id="modalTitle">Tambah Catatan Baru</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-700 dark:hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
 
-        <div class="p-6 overflow-y-auto flex-1">
-          <form id="mealForm" class="space-y-5">
-            <input type="hidden" id="mealId" />
+            <div class="p-6 overflow-y-auto flex-1">
+                <form id="mealForm" class="space-y-5">
+                    <input type="hidden" id="mealId">
+                    
+                    <!-- Image Upload/Camera Area -->
+                    <div class="w-full">
+                        <label class="block text-sm font-medium mb-1">Foto</label>
+                        <div id="imageContainer" class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer relative overflow-hidden group h-48 flex items-center justify-center">
+                            
+                            <div id="uploadPlaceholder" class="text-center flex flex-col items-center p-4">
+                                <div class="flex gap-4 mb-3">
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm text-primary">
+                                        <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                                    </div>
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm text-blue-500">
+                                        <i class="fa-solid fa-camera text-xl"></i>
+                                    </div>
+                                </div>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Klik untuk upload / ambil foto</p>
+                                <p class="text-xs text-gray-400 mt-1">JPEG, PNG maks 5MB</p>
+                            </div>
 
-            <!-- Image Upload/Camera Area -->
-            <div class="w-full">
-              <label class="block text-sm font-medium mb-1">Foto</label>
-              <div
-                id="imageContainer"
-                class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer relative overflow-hidden group h-48 flex items-center justify-center"
-              >
-                <div
-                  id="uploadPlaceholder"
-                  class="text-center flex flex-col items-center p-4"
-                >
-                  <div class="flex gap-4 mb-3">
-                    <div
-                      class="w-12 h-12 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm text-primary"
-                    >
-                      <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                            <img id="previewImg" src="" alt="Preview" class="absolute inset-0 w-full h-full object-cover hidden z-10">
+                            
+                            <!-- Overlay to change image -->
+                            <div id="changeImgOverlay" class="absolute inset-0 bg-black/50 z-20 hidden items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="text-white font-medium bg-black/50 px-3 py-1 rounded-full text-sm"><i class="fa-solid fa-pen mr-2"></i>Ganti Foto</span>
+                            </div>
+
+                            <!-- Dihapus 'capture="environment"' agar bisa pilih dari galeri di HP -->
+                            <input type="file" id="imageInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30">
+                        </div>
+                        <input type="hidden" id="imageBase64">
                     </div>
-                    <div
-                      class="w-12 h-12 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm text-blue-500"
-                    >
-                      <i class="fa-solid fa-camera text-xl"></i>
+
+                    <div>
+                        <label for="mealName" class="block text-sm font-medium mb-1">Nama Makanan *</label>
+                        <input type="text" id="mealName" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary">
                     </div>
-                  </div>
-                  <p
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Klik untuk upload / ambil foto
-                  </p>
-                  <p class="text-xs text-gray-400 mt-1">JPEG, PNG maks 5MB</p>
-                </div>
 
-                <img
-                  id="previewImg"
-                  src=""
-                  alt="Preview"
-                  class="absolute inset-0 w-full h-full object-cover hidden z-10"
-                />
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="w-full sm:w-1/2">
+                            <label for="mealCategory" class="block text-sm font-medium mb-1">Kategori *</label>
+                            <select id="mealCategory" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="breakfast">Sarapan</option>
+                                <option value="lunch">Makan Siang</option>
+                                <option value="dinner">Makan Malam</option>
+                                <option value="snack">Cemilan</option>
+                                <option value="drinks">Minuman</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-1/2">
+                            <label for="mealDate" class="block text-sm font-medium mb-1">Tanggal *</label>
+                            <input type="date" id="mealDate" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-gray-700 dark:text-gray-200">
+                        </div>
+                    </div>
 
-                <!-- Overlay to change image -->
-                <div
-                  id="changeImgOverlay"
-                  class="absolute inset-0 bg-black/50 z-20 hidden items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <span
-                    class="text-white font-medium bg-black/50 px-3 py-1 rounded-full text-sm"
-                    ><i class="fa-solid fa-pen mr-2"></i>Ganti Foto</span
-                  >
-                </div>
+                    <div>
+                        <label for="mealLocation" class="block text-sm font-medium mb-1">Lokasi / Alamat</label>
+                        <div class="relative">
+                            <div class="flex gap-2">
+                                <input type="text" id="mealLocation" autocomplete="off" placeholder="Ketik nama tempat / alamat" class="flex-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary">
+                                <button type="button" id="openMapBtn" class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition" title="Pilih dari Peta">
+                                    <i class="fa-solid fa-map-location-dot"></i>
+                                </button>
+                            </div>
+                            <!-- Dropdown Rekomendasi Alamat -->
+                            <ul id="locationSuggestions" class="absolute z-50 w-full bg-white dark:bg-cardDark border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl mt-1 hidden max-h-48 overflow-y-auto text-sm"></ul>
+                        </div>
+                    </div>
 
-                <input
-                  type="file"
-                  id="imageInput"
-                  accept="image/*"
-                  capture="environment"
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
-                />
-              </div>
-              <input type="hidden" id="imageBase64" />
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="w-full sm:w-1/2">
+                            <label for="mealPrice" class="block text-sm font-medium mb-1">Harga (Rp)</label>
+                            <input type="number" id="mealPrice" placeholder="Contoh: 25000" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div class="w-full sm:w-1/2">
+                            <label for="mealRating" class="block text-sm font-medium mb-1">Rating (1-10)</label>
+                            <input type="number" id="mealRating" min="1" max="10" step="0.5" placeholder="Contoh: 8.5" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="mealDesc" class="block text-sm font-medium mb-1">Deskripsi (Opsional)</label>
+                        <textarea id="mealDesc" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="mealFav" class="w-5 h-5 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600">
+                        <label for="mealFav" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center gap-1"><i class="fa-solid fa-heart text-red-500"></i> Tandai sebagai Favorit</label>
+                    </div>
+                </form>
             </div>
 
-            <div>
-              <label for="mealName" class="block text-sm font-medium mb-1"
-                >Nama Makanan *</label
-              >
-              <input
-                type="text"
-                id="mealName"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-3 z-10">
+                <button type="button" id="cancelBtn" class="px-5 py-2 rounded-xl text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition">Batal</button>
+                <button type="submit" form="mealForm" id="saveBtn" class="px-5 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primaryDark transition shadow-lg shadow-primary/30 flex items-center gap-2">
+                    <span id="saveText">Simpan Data</span>
+                    <div id="saveLoader" class="loader hidden !w-4 !h-4 !border-2 !border-white !border-t-transparent"></div>
+                </button>
             </div>
-
-            <div class="flex flex-col sm:flex-row gap-4">
-              <div class="w-full sm:w-1/2">
-                <label for="mealCategory" class="block text-sm font-medium mb-1"
-                  >Kategori *</label
-                >
-                <select
-                  id="mealCategory"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="breakfast">Sarapan</option>
-                  <option value="lunch">Makan Siang</option>
-                  <option value="dinner">Makan Malam</option>
-                  <option value="snack">Cemilan</option>
-                  <option value="drinks">Minuman</option>
-                </select>
-              </div>
-              <div class="w-full sm:w-1/2">
-                <label for="mealDate" class="block text-sm font-medium mb-1"
-                  >Tanggal *</label
-                >
-                <input
-                  type="date"
-                  id="mealDate"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-gray-700 dark:text-gray-200"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label for="mealLocation" class="block text-sm font-medium mb-1"
-                >Lokasi / Alamat</label
-              >
-              <div class="relative">
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="mealLocation"
-                    autocomplete="off"
-                    placeholder="Ketik nama tempat / alamat"
-                    class="flex-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <button
-                    type="button"
-                    id="openMapBtn"
-                    class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition"
-                    title="Pilih dari Peta"
-                  >
-                    <i class="fa-solid fa-map-location-dot"></i>
-                  </button>
-                </div>
-                <!-- Dropdown Rekomendasi Alamat -->
-                <ul
-                  id="locationSuggestions"
-                  class="absolute z-50 w-full bg-white dark:bg-cardDark border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl mt-1 hidden max-h-48 overflow-y-auto text-sm"
-                ></ul>
-              </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-4">
-              <div class="w-full sm:w-1/2">
-                <label for="mealPrice" class="block text-sm font-medium mb-1"
-                  >Harga (Rp)</label
-                >
-                <input
-                  type="number"
-                  id="mealPrice"
-                  placeholder="Contoh: 25000"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div class="w-full sm:w-1/2">
-                <label for="mealRating" class="block text-sm font-medium mb-1"
-                  >Rating (1-10)</label
-                >
-                <input
-                  type="number"
-                  id="mealRating"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  placeholder="Contoh: 8.5"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label for="mealDesc" class="block text-sm font-medium mb-1"
-                >Deskripsi (Opsional)</label
-              >
-              <textarea
-                id="mealDesc"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              ></textarea>
-            </div>
-
-            <div class="flex items-center">
-              <input
-                type="checkbox"
-                id="mealFav"
-                class="w-5 h-5 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
-              />
-              <label
-                for="mealFav"
-                class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 flex items-center gap-1"
-                ><i class="fa-solid fa-heart text-red-500"></i> Tandai sebagai
-                Favorit</label
-              >
-            </div>
-          </form>
         </div>
-
-        <div
-          class="px-6 py-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-3 z-10"
-        >
-          <button
-            type="button"
-            id="cancelBtn"
-            class="px-5 py-2 rounded-xl text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition"
-          >
-            Batal
-          </button>
-          <button
-            type="submit"
-            form="mealForm"
-            id="saveBtn"
-            class="px-5 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primaryDark transition shadow-lg shadow-primary/30 flex items-center gap-2"
-          >
-            <span id="saveText">Simpan Data</span>
-            <div
-              id="saveLoader"
-              class="loader hidden !w-4 !h-4 !border-2 !border-white !border-t-transparent"
-            ></div>
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- Meal Detail Modal -->
-    <div
-      id="detailModal"
-      class="fixed inset-0 z-50 hidden modal-overlay bg-black/80 flex items-center justify-center p-0 sm:p-6"
-    >
-      <div
-        class="bg-white dark:bg-cardDark sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] max-w-2xl flex flex-col overflow-hidden transform transition-all scale-95 opacity-0"
-        id="detailModalContent"
-      >
-        <!-- Image Header -->
-        <div
-          class="relative w-full bg-black flex justify-center items-center flex-shrink-0"
-          style="max-height: 60vh"
-        >
-          <img
-            id="detailImg"
-            src=""
-            alt="Meal"
-            class="w-full h-auto max-h-[60vh] object-contain"
-          />
-          <button
-            id="closeDetailBtn"
-            class="absolute top-4 right-4 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 transition z-10"
-          >
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-          <div class="absolute bottom-4 right-4 flex gap-2 z-10">
-            <button
-              id="detailShareBtn"
-              class="bg-white/90 dark:bg-slate-800/90 w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition text-blue-500"
-            >
-              <i class="fa-solid fa-share-nodes text-xl"></i>
-            </button>
-            <button
-              id="detailFavBtn"
-              class="bg-white/90 dark:bg-slate-800/90 w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition text-gray-400"
-            >
-              <i class="fa-solid fa-heart text-xl"></i>
-            </button>
-          </div>
+    <div id="detailModal" class="fixed inset-0 z-50 hidden modal-overlay bg-black/80 flex items-center justify-center p-0 sm:p-6">
+        <div class="bg-white dark:bg-cardDark sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] max-w-2xl flex flex-col overflow-hidden transform transition-all scale-95 opacity-0" id="detailModalContent">
+            <!-- Image Header -->
+            <div class="relative w-full bg-black flex justify-center items-center flex-shrink-0" style="max-height: 60vh;">
+                <img id="detailImg" src="" alt="Meal" class="w-full h-auto max-h-[60vh] object-contain">
+                <button id="closeDetailBtn" class="absolute top-4 right-4 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 transition z-10">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-4 right-4 flex gap-2 z-10">
+                    <button id="detailShareBtn" class="bg-white/90 dark:bg-slate-800/90 w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition text-blue-500">
+                        <i class="fa-solid fa-share-nodes text-xl"></i>
+                    </button>
+                    <button id="detailFavBtn" class="bg-white/90 dark:bg-slate-800/90 w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition text-gray-400">
+                        <i class="fa-solid fa-heart text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 flex-1 overflow-y-auto">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span id="detailCatBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 uppercase tracking-wide"></span>
+                        <h2 id="detailTitle" class="text-2xl sm:text-3xl font-bold">Nama Makanan</h2>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="detailEditBtn" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition"><i class="fa-solid fa-pen"></i></button>
+                        <button id="detailDelBtn" class="w-9 h-9 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-100 transition"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col text-gray-500 dark:text-gray-400 text-sm mb-6 border-b border-gray-100 dark:border-slate-700 pb-4 gap-2">
+                    <div class="flex items-center">
+                        <i class="fa-regular fa-calendar mr-2"></i> <span id="detailDate"></span>
+                        <span class="mx-3">•</span>
+                        <i class="fa-solid fa-tag mr-2"></i> <span id="detailCat" class="capitalize"></span>
+                    </div>
+                    <div class="flex items-start hidden" id="detailLocationContainer">
+                        <i class="fa-solid fa-location-dot mt-1 mr-2 text-red-500 w-4 text-center"></i> 
+                        <a href="#" target="_blank" id="detailLocation" class="flex-1 leading-tight text-blue-500 hover:text-blue-600 hover:underline transition"></a>
+                    </div>
+                    <div class="flex gap-4 mt-2">
+                        <div id="detailRatingContainer" class="flex items-center text-yellow-500 hidden bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-lg border border-yellow-100 dark:border-yellow-900/50">
+                            <i class="fa-solid fa-star mr-1.5"></i>
+                            <span id="detailRating" class="font-bold"></span><span class="text-xs text-gray-500 dark:text-gray-400 ml-0.5">/10</span>
+                        </div>
+                        <div id="detailPriceContainer" class="flex items-center text-green-600 dark:text-green-400 hidden bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg border border-green-100 dark:border-green-900/50">
+                            <i class="fa-solid fa-money-bill-wave mr-1.5"></i>
+                            <span id="detailPrice" class="font-bold"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p id="detailDesc" class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed"></p>
+                </div>
+            </div>
         </div>
-
-        <!-- Content -->
-        <div class="p-6 flex-1 overflow-y-auto">
-          <div class="flex justify-between items-start mb-2">
-            <div>
-              <span
-                id="detailCatBadge"
-                class="inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 uppercase tracking-wide"
-              ></span>
-              <h2 id="detailTitle" class="text-2xl sm:text-3xl font-bold">
-                Nama Makanan
-              </h2>
-            </div>
-            <div class="flex gap-2">
-              <button
-                id="detailEditBtn"
-                class="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition"
-              >
-                <i class="fa-solid fa-pen"></i>
-              </button>
-              <button
-                id="detailDelBtn"
-                class="w-9 h-9 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-100 transition"
-              >
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </div>
-
-          <div
-            class="flex flex-col text-gray-500 dark:text-gray-400 text-sm mb-6 border-b border-gray-100 dark:border-slate-700 pb-4 gap-2"
-          >
-            <div class="flex items-center">
-              <i class="fa-regular fa-calendar mr-2"></i>
-              <span id="detailDate"></span>
-              <span class="mx-3">•</span>
-              <i class="fa-solid fa-tag mr-2"></i>
-              <span id="detailCat" class="capitalize"></span>
-            </div>
-            <div class="flex items-start hidden" id="detailLocationContainer">
-              <i
-                class="fa-solid fa-location-dot mt-1 mr-2 text-red-500 w-4 text-center"
-              ></i>
-              <a
-                href="#"
-                target="_blank"
-                id="detailLocation"
-                class="flex-1 leading-tight text-blue-500 hover:text-blue-600 hover:underline transition"
-              ></a>
-            </div>
-            <div class="flex gap-4 mt-2">
-              <div
-                id="detailRatingContainer"
-                class="flex items-center text-yellow-500 hidden bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-lg border border-yellow-100 dark:border-yellow-900/50"
-              >
-                <i class="fa-solid fa-star mr-1.5"></i>
-                <span id="detailRating" class="font-bold"></span
-                ><span class="text-xs text-gray-500 dark:text-gray-400 ml-0.5"
-                  >/10</span
-                >
-              </div>
-              <div
-                id="detailPriceContainer"
-                class="flex items-center text-green-600 dark:text-green-400 hidden bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg border border-green-100 dark:border-green-900/50"
-              >
-                <i class="fa-solid fa-money-bill-wave mr-1.5"></i>
-                <span id="detailPrice" class="font-bold"></span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <p
-              id="detailDesc"
-              class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed"
-            ></p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Auth Modal (Real Supabase Auth) -->
-    <div
-      id="authModal"
-      class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0"
-        id="authModalContent"
-      >
-        <div class="p-6">
-          <div class="flex justify-end">
-            <button id="closeAuthBtn" class="text-gray-400 hover:text-gray-700">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <div class="text-center mb-6">
-            <div
-              class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 text-primary text-xl"
-            >
-              <i class="fa-solid fa-utensils"></i>
+    <div id="authModal" class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0" id="authModalContent">
+            <div class="p-6">
+                <div class="flex justify-end">
+                    <button id="closeAuthBtn" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 text-primary text-xl"><i class="fa-solid fa-utensils"></i></div>
+                    <h3 class="text-2xl font-bold">Selamat Datang</h3>
+                    <p class="text-sm text-gray-500 mt-1">Masuk untuk menyimpan foto ke Supabase</p>
+                </div>
+                <div class="space-y-4">
+                    <!-- Email Auth -->
+                    <div class="space-y-3">
+                        <input type="email" id="authEmail" placeholder="Alamat Email" class="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-sm">
+                        <input type="password" id="authPassword" placeholder="Kata Sandi (min 6 karakter)" class="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-sm">
+                        
+                        <div class="flex gap-2 pt-2">
+                            <button id="loginEmailBtn" class="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2.5 rounded-xl font-bold hover:shadow-lg transition">Masuk</button>
+                            <button id="signupEmailBtn" class="flex-1 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 py-2.5 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition">Daftar</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <h3 class="text-2xl font-bold">Selamat Datang</h3>
-            <p class="text-sm text-gray-500 mt-1">
-              Masuk untuk menyimpan foto makananmu.
-            </p>
-          </div>
-          <div class="space-y-4">
-            <!-- Email Auth -->
-            <div class="space-y-3">
-              <input
-                type="email"
-                id="authEmail"
-                placeholder="Alamat Email"
-                class="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              />
-              <input
-                type="password"
-                id="authPassword"
-                placeholder="Kata Sandi (min 6 karakter)"
-                class="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              />
-
-              <div class="flex gap-2 pt-2">
-                <button
-                  id="loginEmailBtn"
-                  class="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2.5 rounded-xl font-bold hover:shadow-lg transition"
-                >
-                  Masuk
-                </button>
-                <button
-                  id="signupEmailBtn"
-                  class="flex-1 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 py-2.5 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-                >
-                  Daftar
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
     </div>
 
     <!-- Simple Notification Toast -->
-    <div
-      id="deleteModal"
-      class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white dark:bg-cardDark rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0"
-        id="deleteModalContent"
-      >
-        <div class="p-6 text-center">
-          <i
-            class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"
-          ></i>
-          <h3 class="text-xl font-bold mb-2">Hapus Catatan?</h3>
-          <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">
-            Apakah kamu yakin ingin menghapus foto makanan ini? Tindakan ini
-            tidak bisa dikembalikan.
-          </p>
-          <div class="flex gap-3 justify-center">
-            <button
-              id="cancelDeleteBtn"
-              class="px-5 py-2.5 rounded-xl bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition"
-            >
-              Batal
-            </button>
-            <button
-              id="confirmDeleteBtn"
-              class="px-5 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition shadow-lg shadow-red-500/30"
-            >
-              Ya, Hapus
-            </button>
-          </div>
+    <div id="deleteModal" class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-cardDark rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0" id="deleteModalContent">
+            <div class="p-6 text-center">
+                <i class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Hapus Catatan?</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">Apakah kamu yakin ingin menghapus foto makanan ini? Tindakan ini tidak bisa dikembalikan.</p>
+                <div class="flex gap-3 justify-center">
+                    <button id="cancelDeleteBtn" class="px-5 py-2.5 rounded-xl bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition">Batal</button>
+                    <button id="confirmDeleteBtn" class="px-5 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition shadow-lg shadow-red-500/30">Ya, Hapus</button>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
     <!-- Map Modal -->
-    <div
-      id="mapModal"
-      class="fixed inset-0 z-[70] hidden modal-overlay bg-black/80 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-[70vh] transform transition-all scale-95 opacity-0"
-        id="mapModalContent"
-      >
-        <div
-          class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-cardDark z-10"
-        >
-          <h3 class="font-bold">Pilih Lokasi</h3>
-          <button
-            id="closeMapBtn"
-            class="text-gray-400 hover:text-gray-700 dark:hover:text-white"
-          >
-            <i class="fa-solid fa-xmark text-xl"></i>
-          </button>
+    <div id="mapModal" class="fixed inset-0 z-[70] hidden modal-overlay bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-[70vh] transform transition-all scale-95 opacity-0" id="mapModalContent">
+            <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-cardDark z-10">
+                <h3 class="font-bold">Pilih Lokasi</h3>
+                <button id="closeMapBtn" class="text-gray-400 hover:text-gray-700 dark:hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <!-- Leaflet Map Container -->
+            <div id="mapContainer" class="flex-1 w-full relative bg-gray-100 dark:bg-slate-800 z-0"></div>
+            <div class="p-4 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-cardDark z-10">
+                <p id="selectedAddressText" class="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">Ketuk peta untuk memilih lokasi...</p>
+                <button type="button" id="confirmLocationBtn" class="w-full bg-primary hover:bg-primaryDark text-white py-2.5 rounded-xl font-medium transition shadow-lg shadow-primary/30">Gunakan Lokasi Ini</button>
+            </div>
         </div>
-        <!-- Leaflet Map Container -->
-        <div
-          id="mapContainer"
-          class="flex-1 w-full relative bg-gray-100 dark:bg-slate-800 z-0"
-        ></div>
-        <div
-          class="p-4 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-cardDark z-10"
-        >
-          <p
-            id="selectedAddressText"
-            class="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate"
-          >
-            Ketuk peta untuk memilih lokasi...
-          </p>
-          <button
-            type="button"
-            id="confirmLocationBtn"
-            class="w-full bg-primary hover:bg-primaryDark text-white py-2.5 rounded-xl font-medium transition shadow-lg shadow-primary/30"
-          >
-            Gunakan Lokasi Ini
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- Recap Modal -->
-    <div
-      id="recapModal"
-      class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0"
-        id="recapModalContent"
-      >
-        <div class="p-6">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold">
-              <i class="fa-solid fa-chart-pie text-indigo-500 mr-2"></i> Rekap
-              Makanan
-            </h3>
-            <button
-              id="closeRecapBtn"
-              class="text-gray-400 hover:text-gray-700 dark:hover:text-white"
-            >
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-
-          <div class="space-y-4">
-            <div
-              class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center"
-            >
-              <span class="text-gray-600 dark:text-gray-300 font-medium"
-                >Total Makanan</span
-              >
-              <span id="recapTotal" class="text-2xl font-bold text-primary"
-                >0</span
-              >
+    <div id="recapModal" class="fixed inset-0 z-[60] hidden modal-overlay bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-cardDark rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0" id="recapModalContent">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold"><i class="fa-solid fa-chart-pie text-indigo-500 mr-2"></i> Rekap Makanan</h3>
+                    <button id="closeRecapBtn" class="text-gray-400 hover:text-gray-700 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-300 font-medium">Total Makanan</span>
+                        <span id="recapTotal" class="text-2xl font-bold text-primary">0</span>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-300 font-medium">Makanan Favorit</span>
+                        <span id="recapFavs" class="text-2xl font-bold text-red-500">0</span>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-300 font-medium">Kategori Terbanyak</span>
+                        <span id="recapMost" class="text-lg font-bold text-blue-500 uppercase">NONE</span>
+                    </div>
+                </div>
             </div>
-            <div
-              class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center"
-            >
-              <span class="text-gray-600 dark:text-gray-300 font-medium"
-                >Makanan Favorit</span
-              >
-              <span id="recapFavs" class="text-2xl font-bold text-red-500"
-                >0</span
-              >
-            </div>
-            <div
-              class="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl flex justify-between items-center"
-            >
-              <span class="text-gray-600 dark:text-gray-300 font-medium"
-                >Kategori Terbanyak</span
-              >
-              <span
-                id="recapMost"
-                class="text-lg font-bold text-blue-500 uppercase"
-                >NONE</span
-              >
-            </div>
-          </div>
         </div>
-      </div>
     </div>
 
-    <div
-      id="toast"
-      class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-10 z-[70] flex items-center gap-2 pointer-events-none"
-    >
-      <i id="toastIcon" class="fa-solid fa-circle-check text-green-400"></i>
-      <span id="toastMsg">Berhasil!</span>
+    <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-10 z-[70] flex items-center gap-2 pointer-events-none">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toastMsg">Berhasil!</span>
     </div>
 
     <!-- SUPABASE SCRIPT -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-      // =====================================================================
-      // SUPABASE IMPLEMENTATION
-      // =====================================================================
+        // =====================================================================
+        // SUPABASE IMPLEMENTATION
+        // =====================================================================
+        
+        // PENTING: Perubahan nama variabel agar tidak crash dengan CDN
+        const supabaseUrl = 'https://rylbzduwgzljmwfhmtbs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5bGJ6ZHV3Z3psam13ZmhtdGJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTMyNzcsImV4cCI6MjA5NDQyOTI3N30.Uh1BO5EkGaQjn_af_5lSnEjZeEvVjaRE9L8coT7uY3w';
+        
+        // Memakai supabaseClient (Bukan supabase) agar Javascript tidak error
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-      // PENTING: Perubahan nama variabel agar tidak crash dengan CDN
-      const supabaseUrl = "https://rylbzduwgzljmwfhmtbs.supabase.co";
-      const supabaseKey =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5bGJ6ZHV3Z3psam13ZmhtdGJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTMyNzcsImV4cCI6MjA5NDQyOTI3N30.Uh1BO5EkGaQjn_af_5lSnEjZeEvVjaRE9L8coT7uY3w";
+        let currentUser = null;
 
-      // Memakai supabaseClient (Bukan supabase) agar Javascript tidak error
-      const supabaseClient = window.supabase.createClient(
-        supabaseUrl,
-        supabaseKey,
-      );
+        // App State
+        let meals = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
+        
+        // --- VARIABEL BARU UNTUK STORAGE ---
+        let selectedImageFile = null; 
+        let existingImageUrl = '';
 
-      let currentUser = null;
-
-      // App State
-      let meals = [];
-      let currentFilter = "all";
-      let searchQuery = "";
-
-      // --- VARIABEL BARU UNTUK STORAGE ---
-      let selectedImageFile = null;
-      let existingImageUrl = "";
-
-      // UI Elements
-      const themeToggle = document.getElementById("themeToggle");
-      const html = document.documentElement;
-
-      // Theme Logic
-      if (
-        localStorage.theme === "dark" ||
-        (!("theme" in localStorage) &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      ) {
-        html.classList.add("dark");
-        document
-          .getElementById("themeIcon")
-          .classList.replace("fa-moon", "fa-sun");
-      }
-
-      themeToggle.addEventListener("click", () => {
-        html.classList.toggle("dark");
-        const isDark = html.classList.contains("dark");
-        localStorage.theme = isDark ? "dark" : "light";
-        document
-          .getElementById("themeIcon")
-          .classList.replace(
-            isDark ? "fa-moon" : "fa-sun",
-            isDark ? "fa-sun" : "fa-moon",
-          );
-      });
-
-      // Auth Logic (Supabase)
-      function updateUIAuth() {
-        if (currentUser) {
-          document.getElementById("authSection").classList.add("hidden");
-          document.getElementById("userSection").classList.remove("hidden");
-          document.getElementById("userSection").classList.add("flex");
-          document.getElementById("landingView").classList.add("hidden");
-          document.getElementById("mainContentView").classList.remove("hidden");
-
-          // Tampilkan search bar saat login
-          document.getElementById("searchContainer").classList.remove("hidden");
-          document.getElementById("searchContainer").classList.add("md:block");
-          document
-            .getElementById("mobileSearchContainer")
-            .classList.remove("hidden");
-
-          document.getElementById("userAvatar").innerText = currentUser.email
-            ? currentUser.email[0].toUpperCase()
-            : "U";
-          document.getElementById("userEmail").innerText = currentUser.email;
-
-          loadMeals();
-        } else {
-          document.getElementById("authSection").classList.remove("hidden");
-          document.getElementById("userSection").classList.add("hidden");
-          document.getElementById("userSection").classList.remove("flex");
-          document.getElementById("landingView").classList.remove("hidden");
-          document.getElementById("mainContentView").classList.add("hidden");
-
-          // Sembunyikan search bar saat logout
-          document.getElementById("searchContainer").classList.add("hidden");
-          document
-            .getElementById("searchContainer")
-            .classList.remove("md:block");
-          document
-            .getElementById("mobileSearchContainer")
-            .classList.add("hidden");
-
-          // Clear state
-          meals = [];
-          document.getElementById("mealGrid").innerHTML = "";
-        }
-      }
-
-      // Check Initial Session
-      async function checkSession() {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        currentUser = session?.user || null;
-        updateUIAuth();
-      }
-      checkSession();
-
-      // Listen for Auth Changes
-      supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          currentUser = session?.user || null;
-          updateUIAuth();
-        }
-      });
-
-      // Auth Modals & Events
-      document
-        .getElementById("loginBtn")
-        .addEventListener("click", () => openModal("authModal"));
-      document
-        .getElementById("getStartedBtn")
-        .addEventListener("click", () => openModal("authModal"));
-      document
-        .getElementById("closeAuthBtn")
-        .addEventListener("click", () => closeModal("authModal"));
-
-      // Supabase Email Signup
-      document
-        .getElementById("signupEmailBtn")
-        .addEventListener("click", async () => {
-          const email = document.getElementById("authEmail").value;
-          const password = document.getElementById("authPassword").value;
-          if (!email || !password)
-            return showToast("Isi email & password", "error");
-
-          const btn = document.getElementById("signupEmailBtn");
-          btn.innerText = "Loading...";
-
-          const { data, error } = await supabaseClient.auth.signUp({
-            email,
-            password,
-          });
-
-          btn.innerText = "Daftar";
-
-          if (error) {
-            showToast(error.message, "error");
-          } else {
-            showToast("Daftar berhasil! Anda bisa langsung masuk.");
-            closeModal("authModal");
-          }
-        });
-
-      // Supabase Email Login
-      document
-        .getElementById("loginEmailBtn")
-        .addEventListener("click", async () => {
-          const email = document.getElementById("authEmail").value;
-          const password = document.getElementById("authPassword").value;
-          if (!email || !password)
-            return showToast("Isi email & password", "error");
-
-          const btn = document.getElementById("loginEmailBtn");
-          btn.innerText = "Loading...";
-
-          const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          btn.innerText = "Masuk";
-
-          if (error) {
-            showToast("Gagal masuk, periksa email/sandi Anda.", "error");
-          } else {
-            showToast("Berhasil Masuk!");
-            closeModal("authModal");
-          }
-        });
-
-      // Logout
-      document
-        .getElementById("logoutBtn")
-        .addEventListener("click", async () => {
-          const { error } = await supabaseClient.auth.signOut();
-          if (error) {
-            showToast(error.message, "error");
-          } else {
-            showToast("Berhasil keluar");
-          }
-        });
-
-      // Image Upload Logic (Updated for Supabase Storage)
-      const imageInput = document.getElementById("imageInput");
-      const previewImg = document.getElementById("previewImg");
-      const uploadPlaceholder = document.getElementById("uploadPlaceholder");
-      const changeImgOverlay = document.getElementById("changeImgOverlay");
-      const base64Input = document.getElementById("imageBase64"); // Tidak dipakai lagi untuk database, hanya cadangan jika perlu
-
-      imageInput.addEventListener("change", function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-          showToast("Ukuran gambar terlalu besar. Maks 5MB.", "error");
-          return;
+        // UI Elements
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        // Theme Logic
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
         }
 
-        // SIMPAN FILE ASLI UNTUK DIUPLOAD NANTI
-        selectedImageFile = file;
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            document.getElementById('themeIcon').classList.replace(isDark ? 'fa-moon' : 'fa-sun', isDark ? 'fa-sun' : 'fa-moon');
+        });
 
-        // Buat preview lokal cepat untuk user
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const base64String = event.target.result;
+        // Auth Logic (Supabase)
+        function updateUIAuth() {
+            if (currentUser) {
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('userSection').classList.remove('hidden');
+                document.getElementById('userSection').classList.add('flex');
+                document.getElementById('landingView').classList.add('hidden');
+                document.getElementById('mainContentView').classList.remove('hidden');
+                
+                // Tampilkan search bar saat login
+                document.getElementById('searchContainer').classList.remove('hidden');
+                document.getElementById('searchContainer').classList.add('md:block');
+                document.getElementById('mobileSearchContainer').classList.remove('hidden');
+                
+                document.getElementById('userAvatar').innerText = currentUser.email ? currentUser.email[0].toUpperCase() : 'U';
+                document.getElementById('userEmail').innerText = currentUser.email;
+                
+                loadMeals();
+            } else {
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('userSection').classList.add('hidden');
+                document.getElementById('userSection').classList.remove('flex');
+                document.getElementById('landingView').classList.remove('hidden');
+                document.getElementById('mainContentView').classList.add('hidden');
+                
+                // Sembunyikan search bar saat logout
+                document.getElementById('searchContainer').classList.add('hidden');
+                document.getElementById('searchContainer').classList.remove('md:block');
+                document.getElementById('mobileSearchContainer').classList.add('hidden');
+                
+                // Clear state
+                meals = [];
+                document.getElementById('mealGrid').innerHTML = '';
+            }
+        }
 
-          previewImg.src = base64String;
-          previewImg.classList.remove("hidden");
-          uploadPlaceholder.classList.add("hidden");
-          changeImgOverlay.classList.remove("hidden");
-          changeImgOverlay.classList.add("flex");
-        };
-        reader.readAsDataURL(file);
-      });
+        // Check Initial Session
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            currentUser = session?.user || null;
+            updateUIAuth();
+        }
+        checkSession();
 
-      // CRUD Operations
-      document
-        .getElementById("mealForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          if (!currentUser) return;
+        // Listen for Auth Changes
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                currentUser = session?.user || null;
+                updateUIAuth();
+            }
+        });
 
-          const saveBtn = document.getElementById("saveBtn");
-          const saveText = document.getElementById("saveText");
-          const saveLoader = document.getElementById("saveLoader");
+        // Auth Modals & Events
+        document.getElementById('loginBtn').addEventListener('click', () => openModal('authModal'));
+        document.getElementById('getStartedBtn').addEventListener('click', () => openModal('authModal'));
+        document.getElementById('closeAuthBtn').addEventListener('click', () => closeModal('authModal'));
+        
+        // Supabase Email Signup
+        document.getElementById('signupEmailBtn').addEventListener('click', async () => {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if(!email || !password) return showToast('Isi email & password', 'error');
+            
+            const btn = document.getElementById('signupEmailBtn');
+            btn.innerText = 'Loading...';
+            
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            
+            btn.innerText = 'Daftar';
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Daftar berhasil! Anda bisa langsung masuk.');
+                closeModal('authModal');
+            }
+        });
 
-          saveText.innerText = "Menyimpan...";
-          saveLoader.classList.remove("hidden");
-          saveBtn.disabled = true;
+        // Supabase Email Login
+        document.getElementById('loginEmailBtn').addEventListener('click', async () => {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if(!email || !password) return showToast('Isi email & password', 'error');
+            
+            const btn = document.getElementById('loginEmailBtn');
+            btn.innerText = 'Loading...';
 
-          const id = document.getElementById("mealId").value;
-          const name = document.getElementById("mealName").value;
-          const category = document.getElementById("mealCategory").value;
-          const mealDate = document.getElementById("mealDate").value;
-          const desc = document.getElementById("mealDesc").value;
-          const locationText = document.getElementById("mealLocation").value;
-          const priceVal = document.getElementById("mealPrice").value;
-          const ratingVal = document.getElementById("mealRating").value;
-          const isFav = document.getElementById("mealFav").checked;
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
+            btn.innerText = 'Masuk';
 
-          let finalImageUrl = existingImageUrl; // Default ke gambar lama jika sedang mode edit dan tidak ubah foto
+            if (error) {
+                showToast('Gagal masuk, periksa email/sandi Anda.', 'error');
+            } else {
+                showToast('Berhasil Masuk!');
+                closeModal('authModal');
+            }
+        });
 
-          try {
-            // 1. UPLOAD GAMBAR KE SUPABASE STORAGE (JIKA ADA GAMBAR BARU DIPILIH)
-            if (selectedImageFile) {
-              saveText.innerText = "Mengupload Foto...";
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            const { error } = await supabaseClient.auth.signOut();
+            if(error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Berhasil keluar');
+            }
+        });
 
-              const fileExt = selectedImageFile.name.split(".").pop();
-              const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`; // Nama file unik
-              const filePath = `uploads/${fileName}`; // Masukkan ke dalam folder uploads
+        // Image Upload Logic (Updated for Supabase Storage)
+        const imageInput = document.getElementById('imageInput');
+        const previewImg = document.getElementById('previewImg');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const changeImgOverlay = document.getElementById('changeImgOverlay');
+        const base64Input = document.getElementById('imageBase64'); // Tidak dipakai lagi untuk database, hanya cadangan jika perlu
 
-              // Upload file
-              const { data: uploadData, error: uploadError } =
-                await supabaseClient.storage
-                  .from("meals-images")
-                  .upload(filePath, selectedImageFile, {
-                    cacheControl: "3600",
-                    upsert: false,
-                  });
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-              if (uploadError) {
-                console.error("Storage Upload Error:", uploadError);
-                throw new Error(
-                  "Gagal mengupload gambar ke Storage: " + uploadError.message,
-                );
-              }
-
-              // Dapatkan URL Publik
-              const { data: publicUrlData } = supabaseClient.storage
-                .from("meals-images")
-                .getPublicUrl(filePath);
-
-              finalImageUrl = publicUrlData.publicUrl;
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Ukuran gambar terlalu besar. Maks 5MB.', 'error');
+                return;
             }
 
-            // 2. Fallback Jika benar-benar tidak ada foto
-            if (!finalImageUrl) {
-              const colors = {
-                breakfast: "FDB813",
-                lunch: "4CAF50",
-                dinner: "E91E63",
-                snack: "FF9800",
-                drinks: "00BCD4",
-              };
-              finalImageUrl = `https://placehold.co/600x400/${colors[category] || "CCC"}/FFF?text=${encodeURIComponent(name)}&font=montserrat`;
-            }
+            // SIMPAN FILE ASLI UNTUK DIUPLOAD NANTI
+            selectedImageFile = file;
 
-            saveText.innerText = "Menyimpan Data...";
-            const mealData = {
-              user_id: currentUser.id,
-              name: name,
-              category: category,
-              date: mealDate,
-              description: desc,
-              location: locationText,
-              price: priceVal ? parseFloat(priceVal) : null,
-              rating: ratingVal ? parseFloat(ratingVal) : null,
-              image_url: finalImageUrl,
-              is_favorite: isFav,
+            // Buat preview lokal cepat untuk user
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const base64String = event.target.result;
+                
+                previewImg.src = base64String;
+                previewImg.classList.remove('hidden');
+                uploadPlaceholder.classList.add('hidden');
+                changeImgOverlay.classList.remove('hidden');
+                changeImgOverlay.classList.add('flex');
             };
-
-            if (id) {
-              const { error } = await supabaseClient
-                .from("meals")
-                .update(mealData)
-                .eq("id", id);
-              if (error) throw error;
-              showToast("Data berhasil diubah");
-            } else {
-              const { error } = await supabaseClient
-                .from("meals")
-                .insert([mealData]);
-              if (error) throw error;
-              showToast("Data berhasil disimpan");
-            }
-
-            closeModal("mealModal");
-            resetForm();
-            loadMeals();
-          } catch (error) {
-            console.error("Supabase Error Details:", error);
-            showToast(
-              "Gagal: " + (error.message || "Cek tabel & RLS Supabase"),
-              "error",
-            );
-          } finally {
-            saveText.innerText = "Simpan Data";
-            saveLoader.classList.add("hidden");
-            saveBtn.disabled = false;
-          }
+            reader.readAsDataURL(file);
         });
 
-      async function loadMeals() {
-        if (!currentUser) return;
+        // CRUD Operations
+        document.getElementById('mealForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
 
-        document.getElementById("feedLoader").classList.remove("hidden");
-        document.getElementById("mealGrid").innerHTML = "";
-        document.getElementById("emptyState").classList.add("hidden");
+            const saveBtn = document.getElementById('saveBtn');
+            const saveText = document.getElementById('saveText');
+            const saveLoader = document.getElementById('saveLoader');
+            
+            saveText.innerText = 'Menyimpan...';
+            saveLoader.classList.remove('hidden');
+            saveBtn.disabled = true;
 
-        try {
-          const { data, error } = await supabaseClient
-            .from("meals")
-            .select("*")
-            .eq("user_id", currentUser.id)
-            .order("created_at", { ascending: false });
+            const id = document.getElementById('mealId').value;
+            const name = document.getElementById('mealName').value;
+            const category = document.getElementById('mealCategory').value;
+            const mealDate = document.getElementById('mealDate').value;
+            const desc = document.getElementById('mealDesc').value;
+            const locationText = document.getElementById('mealLocation').value;
+            const priceVal = document.getElementById('mealPrice').value;
+            const ratingVal = document.getElementById('mealRating').value;
+            const isFav = document.getElementById('mealFav').checked;
+            
+            let finalImageUrl = existingImageUrl; // Default ke gambar lama jika sedang mode edit dan tidak ubah foto
 
-          if (error) throw error;
+            try {
+                // 1. UPLOAD GAMBAR KE SUPABASE STORAGE (JIKA ADA GAMBAR BARU DIPILIH)
+                if (selectedImageFile) {
+                    saveText.innerText = 'Mengupload Foto...';
+                    
+                    const fileExt = selectedImageFile.name.split('.').pop();
+                    const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`; // Nama file unik
+                    const filePath = `uploads/${fileName}`; // Masukkan ke dalam folder uploads
 
-          meals = data.map((m) => ({
-            id: m.id,
-            userId: m.user_id,
-            name: m.name,
-            category: m.category,
-            date: m.date,
-            location: m.location,
-            price: m.price,
-            rating: m.rating,
-            description: m.description,
-            imageUrl: m.image_url,
-            isFavorite: m.is_favorite,
-            createdAt: m.created_at,
-          }));
+                    // Upload file
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('meals-images')
+                        .upload(filePath, selectedImageFile, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
 
-          renderMeals();
-        } catch (error) {
-          console.error("Load Meals Error:", error);
-          showToast(
-            "Gagal memuat data: " + (error.message || "Cek tabel Supabase"),
-            "error",
-          );
-        } finally {
-          document.getElementById("feedLoader").classList.add("hidden");
-        }
-      }
+                    if (uploadError) {
+                        console.error("Storage Upload Error:", uploadError);
+                        throw new Error("Gagal mengupload gambar ke Storage: " + uploadError.message);
+                    }
 
-      async function deleteMeal(id) {
-        try {
-          const { error } = await supabaseClient
-            .from("meals")
-            .delete()
-            .eq("id", id);
-          if (error) throw error;
+                    // Dapatkan URL Publik
+                    const { data: publicUrlData } = supabaseClient.storage
+                        .from('meals-images')
+                        .getPublicUrl(filePath);
 
-          meals = meals.filter((m) => m.id !== id);
-          renderMeals();
-          closeModal("detailModal");
-          showToast("Berhasil dihapus");
-        } catch (e) {
-          console.error(e);
-          showToast("Gagal menghapus", "error");
-        }
-      }
+                    finalImageUrl = publicUrlData.publicUrl;
+                }
 
-      async function toggleFavorite(id) {
-        const meal = meals.find((m) => m.id === id);
-        if (meal) {
-          meal.isFavorite = !meal.isFavorite;
+                // 2. Fallback Jika benar-benar tidak ada foto
+                if (!finalImageUrl) {
+                    const colors = { breakfast: 'FDB813', lunch: '4CAF50', dinner: 'E91E63', snack: 'FF9800', drinks: '00BCD4' };
+                    finalImageUrl = `https://placehold.co/600x400/${colors[category] || 'CCC'}/FFF?text=${encodeURIComponent(name)}&font=montserrat`;
+                }
 
-          const { error } = await supabaseClient
-            .from("meals")
-            .update({ is_favorite: meal.isFavorite })
-            .eq("id", id);
-          if (error) return showToast("Gagal update favorit", "error");
+                saveText.innerText = 'Menyimpan Data...';
+                const mealData = {
+                    user_id: currentUser.id,
+                    name: name,
+                    category: category,
+                    date: mealDate,
+                    description: desc,
+                    location: locationText,
+                    price: priceVal ? parseFloat(priceVal) : null,
+                    rating: ratingVal ? parseFloat(ratingVal) : null,
+                    image_url: finalImageUrl,
+                    is_favorite: isFav
+                };
 
-          renderMeals();
-
-          if (
-            !document.getElementById("detailModal").classList.contains("hidden")
-          ) {
-            const btn = document.getElementById("detailFavBtn");
-            if (meal.isFavorite) {
-              btn.classList.add("text-red-500");
-              btn.classList.remove("text-gray-400");
-              btn.innerHTML = '<i class="fa-solid fa-heart text-xl"></i>';
-            } else {
-              btn.classList.remove("text-red-500");
-              btn.classList.add("text-gray-400");
-              btn.innerHTML = '<i class="fa-regular fa-heart text-xl"></i>';
+                if (id) {
+                    const { error } = await supabaseClient.from('meals').update(mealData).eq('id', id);
+                    if (error) throw error;
+                    showToast('Data berhasil diubah');
+                } else {
+                    const { error } = await supabaseClient.from('meals').insert([mealData]);
+                    if (error) throw error;
+                    showToast('Data berhasil disimpan');
+                }
+                
+                closeModal('mealModal');
+                resetForm();
+                loadMeals();
+            } catch (error) {
+                console.error("Supabase Error Details:", error);
+                showToast('Gagal: ' + (error.message || 'Cek tabel & RLS Supabase'), 'error');
+            } finally {
+                saveText.innerText = 'Simpan Data';
+                saveLoader.classList.add('hidden');
+                saveBtn.disabled = false;
             }
-          }
-        }
-      }
+        });
 
-      function formatDate(dateValue) {
-        if (!dateValue) return "";
-        const date = new Date(dateValue);
-        return new Intl.DateTimeFormat("id-ID", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }).format(date);
-      }
+        async function loadMeals() {
+            if (!currentUser) return;
+            
+            document.getElementById('feedLoader').classList.remove('hidden');
+            document.getElementById('mealGrid').innerHTML = '';
+            document.getElementById('emptyState').classList.add('hidden');
 
-      const catColors = {
-        breakfast:
-          "bg-[#fef3c7] text-[#92400e] dark:bg-[#78350f]/30 dark:text-[#fcd34d]",
-        lunch:
-          "bg-[#dcfce7] text-[#166534] dark:bg-[#14532d]/30 dark:text-[#86efac]",
-        dinner:
-          "bg-[#fce7f3] text-[#9d174d] dark:bg-[#831843]/30 dark:text-[#f9a8d4]",
-        snack:
-          "bg-[#ffedd5] text-[#9a3412] dark:bg-[#7c2d12]/30 dark:text-[#fdba74]",
-        drinks:
-          "bg-[#e0f2fe] text-[#075985] dark:bg-[#0c4a6e]/30 dark:text-[#7dd3fc]",
-      };
+            try {
+                const { data, error } = await supabaseClient
+                    .from('meals')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
 
-      function renderMeals() {
-        const grid = document.getElementById("mealGrid");
-        grid.innerHTML = "";
+                if (error) throw error;
 
-        let filteredMeals = meals;
+                meals = data.map(m => ({
+                    id: m.id,
+                    userId: m.user_id,
+                    name: m.name,
+                    category: m.category,
+                    date: m.date,
+                    location: m.location,
+                    price: m.price,
+                    rating: m.rating,
+                    description: m.description,
+                    imageUrl: m.image_url,
+                    isFavorite: m.is_favorite,
+                    createdAt: m.created_at
+                }));
 
-        if (currentFilter === "favorites") {
-          filteredMeals = filteredMeals.filter((m) => m.isFavorite);
-        } else if (currentFilter !== "all") {
-          filteredMeals = filteredMeals.filter(
-            (m) => m.category === currentFilter,
-          );
-        }
-
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          filteredMeals = filteredMeals.filter(
-            (m) =>
-              m.name.toLowerCase().includes(q) ||
-              (m.description && m.description.toLowerCase().includes(q)),
-          );
+                renderMeals();
+            } catch (error) {
+                console.error("Load Meals Error:", error);
+                showToast('Gagal memuat data: ' + (error.message || 'Cek tabel Supabase'), 'error');
+            } finally {
+                document.getElementById('feedLoader').classList.add('hidden');
+            }
         }
 
-        document.getElementById("mealCount").innerText =
-          `${filteredMeals.length} catatan makanan`;
+        async function deleteMeal(id) {
+            try {
+                const { error } = await supabaseClient.from('meals').delete().eq('id', id);
+                if (error) throw error;
 
-        if (filteredMeals.length === 0) {
-          document.getElementById("emptyState").classList.remove("hidden");
-          return;
-        } else {
-          document.getElementById("emptyState").classList.add("hidden");
+                meals = meals.filter(m => m.id !== id);
+                renderMeals();
+                closeModal('detailModal');
+                showToast('Berhasil dihapus');
+            } catch(e) {
+                console.error(e);
+                showToast('Gagal menghapus', 'error');
+            }
         }
 
-        filteredMeals.forEach((meal) => {
-          const card = document.createElement("div");
-          card.className =
-            "masonry-item bg-white dark:bg-cardDark rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden cursor-pointer group hover:shadow-xl transition-all duration-300 meal-card";
-          card.onclick = () => showMealDetail(meal);
+        async function toggleFavorite(id) {
+            const meal = meals.find(m => m.id === id);
+            if(meal) {
+                meal.isFavorite = !meal.isFavorite;
+                
+                const { error } = await supabaseClient.from('meals').update({ is_favorite: meal.isFavorite }).eq('id', id);
+                if (error) return showToast('Gagal update favorit', 'error');
 
-          const favIcon = meal.isFavorite
-            ? '<i class="fa-solid fa-heart text-red-500"></i>'
-            : '<i class="fa-regular fa-heart text-white drop-shadow-md"></i>';
+                renderMeals();
+                
+                if(!document.getElementById('detailModal').classList.contains('hidden')) {
+                    const btn = document.getElementById('detailFavBtn');
+                    if (meal.isFavorite) {
+                        btn.classList.add('text-red-500');
+                        btn.classList.remove('text-gray-400');
+                        btn.innerHTML = '<i class="fa-solid fa-heart text-xl"></i>';
+                    } else {
+                        btn.classList.remove('text-red-500');
+                        btn.classList.add('text-gray-400');
+                        btn.innerHTML = '<i class="fa-regular fa-heart text-xl"></i>';
+                    }
+                }
+            }
+        }
 
-          card.innerHTML = `
+        function formatDate(dateValue) {
+            if (!dateValue) return '';
+            const date = new Date(dateValue);
+            return new Intl.DateTimeFormat('id-ID', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+        }
+
+        const catColors = {
+            breakfast: 'bg-[#fef3c7] text-[#92400e] dark:bg-[#78350f]/30 dark:text-[#fcd34d]',
+            lunch: 'bg-[#dcfce7] text-[#166534] dark:bg-[#14532d]/30 dark:text-[#86efac]',
+            dinner: 'bg-[#fce7f3] text-[#9d174d] dark:bg-[#831843]/30 dark:text-[#f9a8d4]',
+            snack: 'bg-[#ffedd5] text-[#9a3412] dark:bg-[#7c2d12]/30 dark:text-[#fdba74]',
+            drinks: 'bg-[#e0f2fe] text-[#075985] dark:bg-[#0c4a6e]/30 dark:text-[#7dd3fc]'
+        };
+
+        function renderMeals() {
+            const grid = document.getElementById('mealGrid');
+            grid.innerHTML = '';
+            
+            let filteredMeals = meals;
+
+            if (currentFilter === 'favorites') {
+                filteredMeals = filteredMeals.filter(m => m.isFavorite);
+            } else if (currentFilter !== 'all') {
+                filteredMeals = filteredMeals.filter(m => m.category === currentFilter);
+            }
+
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filteredMeals = filteredMeals.filter(m => 
+                    m.name.toLowerCase().includes(q) || 
+                    (m.description && m.description.toLowerCase().includes(q))
+                );
+            }
+
+            document.getElementById('mealCount').innerText = `${filteredMeals.length} catatan makanan`;
+
+            if (filteredMeals.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+
+            filteredMeals.forEach(meal => {
+                const card = document.createElement('div');
+                card.className = 'masonry-item bg-white dark:bg-cardDark rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden cursor-pointer group hover:shadow-xl transition-all duration-300 meal-card';
+                card.onclick = () => showMealDetail(meal);
+                
+                const favIcon = meal.isFavorite ? '<i class="fa-solid fa-heart text-red-500"></i>' : '<i class="fa-regular fa-heart text-white drop-shadow-md"></i>';
+
+                card.innerHTML = `
                     <div class="relative overflow-hidden">
                         <img src="${meal.imageUrl}" alt="${meal.name}" class="w-full h-auto transform group-hover:scale-105 transition duration-500" loading="lazy">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         
-                        <span class="absolute top-2 left-2 sm:top-3 sm:left-3 text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md backdrop-blur-md bg-white/80 dark:bg-black/50 ${catColors[meal.category].split(" ")[1]} uppercase tracking-wider">${meal.category}</span>
+                        <span class="absolute top-2 left-2 sm:top-3 sm:left-3 text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md backdrop-blur-md bg-white/80 dark:bg-black/50 ${catColors[meal.category].split(' ')[1]} uppercase tracking-wider">${meal.category}</span>
                         
                         <button class="absolute top-2 right-2 sm:top-3 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition z-10" onclick="event.stopPropagation(); toggleFavorite('${meal.id}')">
                             ${favIcon}
@@ -1715,595 +1025,495 @@
                     </div>
                     <div class="p-3 sm:p-4">
                         <h3 class="font-bold text-sm sm:text-lg mb-0.5 sm:mb-1 line-clamp-1 group-hover:text-primary transition">${meal.name}</h3>
-                        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 line-clamp-2">${meal.description || "-"}</p>
+                        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 line-clamp-2">${meal.description || '-'}</p>
                         <div class="flex justify-between items-center text-[10px] sm:text-xs text-gray-400">
                             <span><i class="fa-regular fa-calendar mr-1"></i> ${formatDate(meal.date || meal.createdAt)}</span>
                         </div>
                     </div>
                 `;
-          grid.appendChild(card);
-        });
-      }
-
-      // Form & Modal Helpers
-      function openModal(id) {
-        const modal = document.getElementById(id);
-        const content = document.getElementById(id + "Content");
-        modal.classList.remove("hidden");
-        void modal.offsetWidth;
-        content.classList.remove("scale-95", "opacity-0");
-        content.classList.add("scale-100", "opacity-100");
-      }
-
-      function closeModal(id) {
-        const modal = document.getElementById(id);
-        const content = document.getElementById(id + "Content");
-        content.classList.remove("scale-100", "opacity-100");
-        content.classList.add("scale-95", "opacity-0");
-        setTimeout(() => {
-          modal.classList.add("hidden");
-        }, 300);
-      }
-
-      function resetForm() {
-        document.getElementById("mealForm").reset();
-        document.getElementById("mealId").value = "";
-        document.getElementById("mealLocation").value = "";
-        document.getElementById("mealPrice").value = "";
-        document.getElementById("mealRating").value = "";
-        document.getElementById("modalTitle").innerText = "Tambah Catatan Baru";
-        document.getElementById("mealDate").valueAsDate = new Date();
-
-        // RESET STATE STORAGE
-        selectedImageFile = null;
-        existingImageUrl = "";
-
-        document.getElementById("imageBase64").value = "";
-        previewImg.src = "";
-        previewImg.classList.add("hidden");
-        uploadPlaceholder.classList.remove("hidden");
-        changeImgOverlay.classList.add("hidden");
-        changeImgOverlay.classList.remove("flex");
-      }
-
-      document.getElementById("addBtn").addEventListener("click", () => {
-        resetForm();
-        openModal("mealModal");
-      });
-      document
-        .getElementById("closeModalBtn")
-        .addEventListener("click", () => closeModal("mealModal"));
-      document
-        .getElementById("closeDetailBtn")
-        .addEventListener("click", () => closeModal("detailModal"));
-      document
-        .getElementById("cancelBtn")
-        .addEventListener("click", () => closeModal("mealModal"));
-
-      window.addEventListener("click", (e) => {
-        if (e.target.classList.contains("modal-overlay"))
-          closeModal(e.target.id);
-      });
-
-      function showMealDetail(meal) {
-        document.getElementById("detailImg").src = meal.imageUrl;
-        document.getElementById("detailTitle").innerText = meal.name;
-        document.getElementById("detailDesc").innerText =
-          meal.description || "Tidak ada deskripsi.";
-        document.getElementById("detailCat").innerText = meal.category;
-        document.getElementById("detailDate").innerText = formatDate(
-          meal.date || meal.createdAt,
-        );
-
-        const locContainer = document.getElementById("detailLocationContainer");
-        if (meal.location && meal.location.trim() !== "") {
-          const locEl = document.getElementById("detailLocation");
-          locEl.innerText = meal.location;
-          // Generate Google Maps Search Link based on location text
-          locEl.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meal.location)}`;
-          locContainer.classList.remove("hidden");
-        } else {
-          locContainer.classList.add("hidden");
-        }
-
-        const ratingContainer = document.getElementById(
-          "detailRatingContainer",
-        );
-        if (meal.rating) {
-          document.getElementById("detailRating").innerText = meal.rating;
-          ratingContainer.classList.remove("hidden");
-        } else {
-          ratingContainer.classList.add("hidden");
-        }
-
-        const priceContainer = document.getElementById("detailPriceContainer");
-        if (meal.price) {
-          document.getElementById("detailPrice").innerText =
-            "Rp " + meal.price.toLocaleString("id-ID");
-          priceContainer.classList.remove("hidden");
-        } else {
-          priceContainer.classList.add("hidden");
-        }
-
-        const favBtn = document.getElementById("detailFavBtn");
-        if (meal.isFavorite) {
-          favBtn.classList.add("text-red-500");
-          favBtn.classList.remove("text-gray-400");
-          favBtn.innerHTML = '<i class="fa-solid fa-heart text-xl"></i>';
-        } else {
-          favBtn.classList.remove("text-red-500");
-          favBtn.classList.add("text-gray-400");
-          favBtn.innerHTML = '<i class="fa-regular fa-heart text-xl"></i>';
-        }
-
-        const badge = document.getElementById("detailCatBadge");
-        badge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 uppercase tracking-wide ${catColors[meal.category]}`;
-        badge.innerText = meal.category;
-
-        const editBtn = document.getElementById("detailEditBtn");
-        const delBtn = document.getElementById("detailDelBtn");
-        const shareBtn = document.getElementById("detailShareBtn");
-
-        const newEdit = editBtn.cloneNode(true);
-        const newDel = delBtn.cloneNode(true);
-        const newFav = favBtn.cloneNode(true);
-        const newShare = shareBtn.cloneNode(true);
-
-        editBtn.parentNode.replaceChild(newEdit, editBtn);
-        delBtn.parentNode.replaceChild(newDel, delBtn);
-        favBtn.parentNode.replaceChild(newFav, favBtn);
-        shareBtn.parentNode.replaceChild(newShare, shareBtn);
-
-        newEdit.addEventListener("click", () => {
-          closeModal("detailModal");
-          populateFormForEdit(meal);
-        });
-
-        newDel.addEventListener("click", () => {
-          confirmDeleteCustomUI(meal.id);
-        });
-
-        newFav.addEventListener("click", () => toggleFavorite(meal.id));
-
-        newShare.addEventListener("click", async () => {
-          const descText = meal.description ? meal.description : "-";
-          const locText = meal.location
-            ? meal.location
-            : "Tidak ada detail lokasi";
-          let mapLink = meal.location
-            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meal.location)}`
-            : "";
-
-          let shareCaption = `Halo! Perkenalkan ini makanan *${meal.name}*.\nPada tanggal ${formatDate(meal.date || meal.createdAt)} aku mencoba makanan ini.\n\n`;
-
-          if (meal.rating) shareCaption += `⭐ Rating: ${meal.rating}/10\n`;
-          if (meal.price)
-            shareCaption += `💰 Harga: Rp ${meal.price.toLocaleString("id-ID")}\n`;
-
-          shareCaption += `📝 Deskripsi: ${descText}\n`;
-          shareCaption += `📍 Lokasi: ${locText} ${mapLink ? "\n🗺️ Buka di Maps: " + mapLink : ""}`;
-
-          let shareData = {
-            title: "MealSnap - " + meal.name,
-            text: shareCaption,
-          };
-
-          // Ubah logika web share karena URL sekarang adalah public URL Supabase (https://...)
-          shareCaption += `\n\n🖼️ Foto: ${meal.imageUrl}`;
-          shareData.text = shareCaption;
-
-          if (navigator.canShare && meal.imageUrl.startsWith("http")) {
-            try {
-              // Mencoba download gambar menjadi file agar bisa dishare ke WA/Sosmed
-              const response = await fetch(meal.imageUrl);
-              const blob = await response.blob();
-              const file = new File([blob], `mealsnap_${Date.now()}.jpg`, {
-                type: blob.type,
-              });
-
-              if (navigator.canShare({ files: [file] })) {
-                shareData.files = [file];
-              }
-            } catch (e) {
-              console.log(
-                "CORS mencegah fetch gambar untuk share native. Menggunakan share teks URL.",
-              );
-            }
-          }
-
-          if (navigator.share) {
-            try {
-              await navigator.share(shareData);
-            } catch (err) {}
-          } else {
-            fallbackToClipboard(shareCaption);
-          }
-        });
-
-        async function fallbackToClipboard(text) {
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText(text);
-              showToast("Teks disalin ke clipboard");
-            } else throw new Error("No clipboard");
-          } catch (err) {
-            const el = document.createElement("textarea");
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand("copy");
-            document.body.removeChild(el);
-            showToast("Teks disalin ke clipboard!");
-          }
-        }
-
-        openModal("detailModal");
-      }
-
-      let mealIdToDelete = null;
-
-      function confirmDeleteCustomUI(id) {
-        mealIdToDelete = id;
-        const modal = document.getElementById("deleteModal");
-        const content = document.getElementById("deleteModalContent");
-        modal.classList.remove("hidden");
-        setTimeout(() => {
-          content.classList.remove("scale-95", "opacity-0");
-          content.classList.add("scale-100", "opacity-100");
-        }, 10);
-      }
-
-      function closeDeleteModal() {
-        const modal = document.getElementById("deleteModal");
-        const content = document.getElementById("deleteModalContent");
-        content.classList.remove("scale-100", "opacity-100");
-        content.classList.add("scale-95", "opacity-0");
-        setTimeout(() => {
-          modal.classList.add("hidden");
-          mealIdToDelete = null;
-        }, 300);
-      }
-
-      document
-        .getElementById("cancelDeleteBtn")
-        .addEventListener("click", closeDeleteModal);
-
-      document
-        .getElementById("confirmDeleteBtn")
-        .addEventListener("click", () => {
-          if (mealIdToDelete) {
-            deleteMeal(mealIdToDelete);
-            closeDeleteModal();
-          }
-        });
-
-      function populateFormForEdit(meal) {
-        document.getElementById("modalTitle").innerText = "Edit Data";
-        document.getElementById("mealId").value = meal.id;
-        document.getElementById("mealName").value = meal.name;
-        document.getElementById("mealCategory").value = meal.category;
-        document.getElementById("mealLocation").value = meal.location || "";
-        document.getElementById("mealPrice").value = meal.price || "";
-        document.getElementById("mealRating").value = meal.rating || "";
-
-        if (meal.date) {
-          document.getElementById("mealDate").value = meal.date;
-        } else if (meal.createdAt) {
-          const d = new Date(meal.createdAt);
-          document.getElementById("mealDate").value = d
-            .toISOString()
-            .split("T")[0];
-        }
-
-        document.getElementById("mealDesc").value = meal.description || "";
-        document.getElementById("mealFav").checked = meal.isFavorite;
-
-        const preview = document.getElementById("previewImg");
-        const placeholder = document.getElementById("uploadPlaceholder");
-        const overlay = document.getElementById("changeImgOverlay");
-
-        // UPDATE STATE UNTUK EDIT
-        selectedImageFile = null;
-
-        if (meal.imageUrl && !meal.imageUrl.includes("placehold.co")) {
-          preview.src = meal.imageUrl;
-          preview.classList.remove("hidden");
-          placeholder.classList.add("hidden");
-          overlay.classList.remove("hidden");
-          overlay.classList.add("flex");
-
-          existingImageUrl = meal.imageUrl; // Simpan URL lama
-        } else {
-          preview.src = "";
-          preview.classList.add("hidden");
-          placeholder.classList.remove("hidden");
-          overlay.classList.add("hidden");
-          overlay.classList.remove("flex");
-
-          existingImageUrl = "";
-        }
-
-        openModal("mealModal");
-      }
-
-      document.querySelectorAll(".filter-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          document.querySelectorAll(".filter-btn").forEach((b) => {
-            b.classList.remove(
-              "bg-primary",
-              "text-white",
-              "dark:bg-primaryDark",
-              "shadow-lg",
-              "shadow-primary/30",
-            );
-            b.classList.add(
-              "bg-white",
-              "text-stone-600",
-              "dark:bg-cardDark",
-              "dark:text-stone-300",
-            );
-          });
-
-          const target = e.currentTarget;
-          target.classList.remove(
-            "bg-white",
-            "text-stone-600",
-            "dark:bg-cardDark",
-            "dark:text-stone-300",
-          );
-          target.classList.add(
-            "bg-primary",
-            "text-white",
-            "dark:bg-primaryDark",
-            "shadow-lg",
-            "shadow-primary/30",
-          );
-
-          // Trigger animasi gelembung
-          target.classList.remove("bubble-pop");
-          void target.offsetWidth; // trigger reflow
-          target.classList.add("bubble-pop");
-
-          currentFilter = target.dataset.filter;
-
-          const titles = {
-            all: "Jurnal Kamu",
-            favorites: "Momen Favorit",
-            breakfast: "Menu Sarapan",
-            lunch: "Menu Makan Siang",
-            dinner: "Menu Makan Malam",
-            snack: "Cemilan & Snack",
-            drinks: "Minuman",
-          };
-          document.getElementById("feedTitle").innerText =
-            titles[currentFilter];
-
-          renderMeals();
-        });
-      });
-
-      function handleSearch(e) {
-        searchQuery = e.target.value;
-        renderMeals();
-      }
-      document
-        .getElementById("searchInput")
-        .addEventListener("input", handleSearch);
-      document
-        .getElementById("mobileSearchInput")
-        .addEventListener("input", handleSearch);
-
-      // ==========================================
-      // AUTOCOMPLETE LOKASI ALAMAT (NOMINATIM)
-      // ==========================================
-      const mealLocationInput = document.getElementById("mealLocation");
-      const locationSuggestions = document.getElementById(
-        "locationSuggestions",
-      );
-      let locTimeout = null;
-
-      mealLocationInput.addEventListener("input", (e) => {
-        clearTimeout(locTimeout);
-        const query = e.target.value;
-
-        // Minimal 4 karakter untuk menghindari spam pencarian
-        if (query.trim().length < 3) {
-          locationSuggestions.classList.add("hidden");
-          return;
-        }
-
-        // Berikan jeda waktu (debounce 800ms) sebelum memanggil API OpenStreetMap
-        locTimeout = setTimeout(async () => {
-          try {
-            // Tambahkan countrycodes=id dan viewbox Kendari agar hasil pencarian memprioritaskan area Kendari / Indonesia
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&countrycodes=id&viewbox=122.3,-3.8,122.7,-4.1&q=${encodeURIComponent(query)}`,
-            );
-            const data = await res.json();
-
-            locationSuggestions.innerHTML = "";
-            if (data.length > 0) {
-              data.forEach((item) => {
-                const li = document.createElement("li");
-                li.className =
-                  "px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer border-b border-stone-100 dark:border-stone-700/50 last:border-0 flex items-start gap-2 transition";
-
-                // Ambil nama yang lebih relevan jika ada
-                let shortName = item.display_name;
-                if (item.address) {
-                  const ad = item.address;
-                  const poi = ad.amenity || ad.shop || ad.building || ad.road;
-                  const area = ad.suburb || ad.village || ad.city_district;
-                  const parts = [poi, area, ad.city || ad.town].filter(Boolean);
-                  if (parts.length > 0) shortName = parts.join(", ");
-                }
-
-                li.innerHTML = `<i class="fa-solid fa-location-dot text-primary mt-0.5"></i> <div class="flex flex-col"><span class="font-medium leading-tight text-stone-800 dark:text-stone-200">${shortName}</span><span class="text-xs text-stone-500 mt-1 line-clamp-1">${item.display_name}</span></div>`;
-                li.onclick = () => {
-                  // Gunakan nama pendek jika tersedia, atau nama aslinya untuk input
-                  mealLocationInput.value = shortName;
-                  locationSuggestions.classList.add("hidden");
-                };
-                locationSuggestions.appendChild(li);
-              });
-            }
-
-            // SELALU tambahkan opsi "Gunakan teks ini" agar user bisa input nama tempat yang tidak terdaftar di OSM (Misal: Warung kecil)
-            const fallbackLi = document.createElement("li");
-            fallbackLi.className =
-              "px-4 py-3 bg-primary/5 hover:bg-primary/10 dark:bg-primaryDark/20 dark:hover:bg-primaryDark/30 cursor-pointer border-t border-primary/20 flex items-center gap-2 transition text-primaryDark dark:text-primary font-medium";
-            fallbackLi.innerHTML = `<i class="fa-solid fa-pen-clip"></i> Gunakan "${query}"`;
-            fallbackLi.onclick = () => {
-              mealLocationInput.value = query;
-              locationSuggestions.classList.add("hidden");
-            };
-            locationSuggestions.appendChild(fallbackLi);
-
-            locationSuggestions.classList.remove("hidden");
-          } catch (err) {
-            console.error("Geocoding fetch error:", err);
-          }
-        }, 800);
-      });
-
-      // Sembunyikan rekomendasi dropdown jika pengguna klik di luar area
-      document.addEventListener("click", (e) => {
-        if (
-          !mealLocationInput.contains(e.target) &&
-          !locationSuggestions.contains(e.target)
-        ) {
-          locationSuggestions.classList.add("hidden");
-        }
-      });
-
-      // ==========================================
-      // FITUR PETA (LEAFLET)
-      // ==========================================
-      let map = null;
-      let mapMarker = null;
-      let tempAddress = "";
-
-      document.getElementById("openMapBtn").addEventListener("click", () => {
-        openModal("mapModal");
-        setTimeout(() => {
-          if (!map) {
-            // Default titik awal ke Kendari
-            map = L.map("mapContainer").setView([-3.9952, 122.5132], 13);
-
-            // Menggunakan tile layer Google Maps mode Hybrid (Satelit + Label/Nama Tempat)
-            L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-              attribution: "© Google Maps",
-              maxZoom: 20,
-            }).addTo(map);
-
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-                },
-                () => {
-                  console.log("Geolocation ditolak atau gagal.");
-                },
-              );
-            }
-
-            map.on("click", async function (e) {
-              if (mapMarker) mapMarker.setLatLng(e.latlng);
-              else mapMarker = L.marker(e.latlng).addTo(map);
-
-              document.getElementById("selectedAddressText").innerText =
-                "Mencari alamat detail...";
-              try {
-                // Mengubah zoom=16 agar hanya mencari level jalan/area, bukan spesifik ke nama warung/bangunan
-                const res = await fetch(
-                  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=16&addressdetails=1`,
-                );
-                const data = await res.json();
-
-                // Gunakan alamat bawaan dari Maps
-                let addressStr = data.display_name;
-
-                // Persingkat alamat agar tidak terlalu panjang (ambil 3 bagian pertama: Jalan, Kelurahan, Kota)
-                if (addressStr && addressStr.includes(",")) {
-                  const parts = addressStr.split(",");
-                  if (parts.length > 3) {
-                    addressStr = parts.slice(0, 3).join(",").trim();
-                  }
-                }
-
-                tempAddress =
-                  addressStr ||
-                  `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
-                document.getElementById("selectedAddressText").innerText =
-                  tempAddress;
-              } catch (err) {
-                tempAddress = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
-                document.getElementById("selectedAddressText").innerText =
-                  tempAddress;
-              }
+                grid.appendChild(card);
             });
-          } else {
-            map.invalidateSize();
-          }
-        }, 300);
-      });
-
-      document
-        .getElementById("closeMapBtn")
-        .addEventListener("click", () => closeModal("mapModal"));
-      document
-        .getElementById("confirmLocationBtn")
-        .addEventListener("click", () => {
-          if (tempAddress)
-            document.getElementById("mealLocation").value = tempAddress;
-          closeModal("mapModal");
-        });
-
-      // ==========================================
-      // FITUR REKAP MAKANAN
-      // ==========================================
-      document.getElementById("recapBtn").addEventListener("click", () => {
-        if (!meals || meals.length === 0)
-          return showToast("Belum ada data untuk direkap", "error");
-
-        const total = meals.length;
-        const favs = meals.filter((m) => m.isFavorite).length;
-        const catCounts = {};
-        meals.forEach((m) => {
-          catCounts[m.category] = (catCounts[m.category] || 0) + 1;
-        });
-        const mostCat = Object.keys(catCounts).reduce((a, b) =>
-          catCounts[a] > catCounts[b] ? a : b,
-        );
-
-        document.getElementById("recapTotal").innerText = total;
-        document.getElementById("recapFavs").innerText = favs;
-        document.getElementById("recapMost").innerText = mostCat;
-
-        openModal("recapModal");
-      });
-
-      document
-        .getElementById("closeRecapBtn")
-        .addEventListener("click", () => closeModal("recapModal"));
-
-      function showToast(message, type = "success") {
-        const toast = document.getElementById("toast");
-        const msgEl = document.getElementById("toastMsg");
-        const icon = document.getElementById("toastIcon");
-
-        msgEl.innerText = message;
-        if (type === "error") {
-          icon.className = "fa-solid fa-circle-xmark text-red-400";
-        } else {
-          icon.className = "fa-solid fa-circle-check text-green-400";
         }
 
-        toast.classList.remove("opacity-0", "translate-y-10");
-        setTimeout(() => {
-          toast.classList.add("opacity-0", "translate-y-10");
-        }, 3000);
-      }
+        // Form & Modal Helpers
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + 'Content');
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + 'Content');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function resetForm() {
+            document.getElementById('mealForm').reset();
+            document.getElementById('mealId').value = '';
+            document.getElementById('mealLocation').value = '';
+            document.getElementById('mealPrice').value = '';
+            document.getElementById('mealRating').value = '';
+            document.getElementById('modalTitle').innerText = 'Tambah Catatan Baru';
+            document.getElementById('mealDate').valueAsDate = new Date();
+            
+            // RESET STATE STORAGE
+            selectedImageFile = null;
+            existingImageUrl = '';
+            
+            document.getElementById('imageBase64').value = '';
+            previewImg.src = '';
+            previewImg.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+            changeImgOverlay.classList.add('hidden');
+            changeImgOverlay.classList.remove('flex');
+        }
+
+        document.getElementById('addBtn').addEventListener('click', () => {
+            resetForm();
+            openModal('mealModal');
+        });
+        document.getElementById('closeModalBtn').addEventListener('click', () => closeModal('mealModal'));
+        document.getElementById('closeDetailBtn').addEventListener('click', () => closeModal('detailModal'));
+        document.getElementById('cancelBtn').addEventListener('click', () => closeModal('mealModal'));
+
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
+        });
+
+        function showMealDetail(meal) {
+            document.getElementById('detailImg').src = meal.imageUrl;
+            document.getElementById('detailTitle').innerText = meal.name;
+            document.getElementById('detailDesc').innerText = meal.description || 'Tidak ada deskripsi.';
+            document.getElementById('detailCat').innerText = meal.category;
+            document.getElementById('detailDate').innerText = formatDate(meal.date || meal.createdAt);
+            
+            const locContainer = document.getElementById('detailLocationContainer');
+            if (meal.location && meal.location.trim() !== '') {
+                const locEl = document.getElementById('detailLocation');
+                locEl.innerText = meal.location;
+                // Generate Google Maps Search Link based on location text
+                locEl.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meal.location)}`;
+                locContainer.classList.remove('hidden');
+            } else {
+                locContainer.classList.add('hidden');
+            }
+
+            const ratingContainer = document.getElementById('detailRatingContainer');
+            if (meal.rating) {
+                document.getElementById('detailRating').innerText = meal.rating;
+                ratingContainer.classList.remove('hidden');
+            } else {
+                ratingContainer.classList.add('hidden');
+            }
+
+            const priceContainer = document.getElementById('detailPriceContainer');
+            if (meal.price) {
+                document.getElementById('detailPrice').innerText = 'Rp ' + meal.price.toLocaleString('id-ID');
+                priceContainer.classList.remove('hidden');
+            } else {
+                priceContainer.classList.add('hidden');
+            }
+
+            const favBtn = document.getElementById('detailFavBtn');
+            if (meal.isFavorite) {
+                favBtn.classList.add('text-red-500');
+                favBtn.classList.remove('text-gray-400');
+                favBtn.innerHTML = '<i class="fa-solid fa-heart text-xl"></i>';
+            } else {
+                favBtn.classList.remove('text-red-500');
+                favBtn.classList.add('text-gray-400');
+                favBtn.innerHTML = '<i class="fa-regular fa-heart text-xl"></i>';
+            }
+
+            const badge = document.getElementById('detailCatBadge');
+            badge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 uppercase tracking-wide ${catColors[meal.category]}`;
+            badge.innerText = meal.category;
+
+            const editBtn = document.getElementById('detailEditBtn');
+            const delBtn = document.getElementById('detailDelBtn');
+            const shareBtn = document.getElementById('detailShareBtn');
+            
+            const newEdit = editBtn.cloneNode(true);
+            const newDel = delBtn.cloneNode(true);
+            const newFav = favBtn.cloneNode(true);
+            const newShare = shareBtn.cloneNode(true);
+            
+            editBtn.parentNode.replaceChild(newEdit, editBtn);
+            delBtn.parentNode.replaceChild(newDel, delBtn);
+            favBtn.parentNode.replaceChild(newFav, favBtn);
+            shareBtn.parentNode.replaceChild(newShare, shareBtn);
+
+            newEdit.addEventListener('click', () => {
+                closeModal('detailModal');
+                populateFormForEdit(meal);
+            });
+
+            newDel.addEventListener('click', () => {
+                confirmDeleteCustomUI(meal.id);
+            });
+
+            newFav.addEventListener('click', () => toggleFavorite(meal.id));
+
+            newShare.addEventListener('click', async () => {
+                const descText = meal.description ? meal.description : '-';
+                const locText = meal.location ? meal.location : 'Tidak ada detail lokasi';
+                let mapLink = meal.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meal.location)}` : '';
+                
+                let shareCaption = `Halo! Perkenalkan ini makanan *${meal.name}*.\nPada tanggal ${formatDate(meal.date || meal.createdAt)} aku mencoba makanan ini.\n\n`;
+                
+                if (meal.rating) shareCaption += `⭐ Rating: ${meal.rating}/10\n`;
+                if (meal.price) shareCaption += `💰 Harga: Rp ${meal.price.toLocaleString('id-ID')}\n`;
+                
+                shareCaption += `📝 Deskripsi: ${descText}\n`;
+                shareCaption += `📍 Lokasi: ${locText} ${mapLink ? '\n🗺️ Buka di Maps: ' + mapLink : ''}`;
+
+                let shareData = { title: 'MealSnap - ' + meal.name, text: shareCaption };
+                
+                // Ubah logika web share karena URL sekarang adalah public URL Supabase (https://...)
+                shareCaption += `\n\n🖼️ Foto: ${meal.imageUrl}`;
+                shareData.text = shareCaption;
+
+                if (navigator.canShare && meal.imageUrl.startsWith('http')) {
+                    try {
+                        // Mencoba download gambar menjadi file agar bisa dishare ke WA/Sosmed
+                        const response = await fetch(meal.imageUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], `mealsnap_${Date.now()}.jpg`, { type: blob.type });
+                        
+                        if (navigator.canShare({ files: [file] })) {
+                            shareData.files = [file];
+                        }
+                    } catch (e) {
+                        console.log("CORS mencegah fetch gambar untuk share native. Menggunakan share teks URL.");
+                    }
+                }
+
+                if (navigator.share) {
+                    try { await navigator.share(shareData); } catch (err) {}
+                } else {
+                    fallbackToClipboard(shareCaption);
+                }
+            });
+
+            async function fallbackToClipboard(text) {
+                 try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                         await navigator.clipboard.writeText(text);
+                         showToast('Teks disalin ke clipboard');
+                    } else throw new Error('No clipboard');
+                 } catch (err) {
+                    const el = document.createElement('textarea');
+                    el.value = text; document.body.appendChild(el);
+                    el.select(); document.execCommand('copy');
+                    document.body.removeChild(el);
+                    showToast('Teks disalin ke clipboard!');
+                 }
+            }
+
+            openModal('detailModal');
+        }
+
+        let mealIdToDelete = null;
+
+        function confirmDeleteCustomUI(id) {
+            mealIdToDelete = id;
+            const modal = document.getElementById('deleteModal');
+            const content = document.getElementById('deleteModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            const content = document.getElementById('deleteModalContent');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                mealIdToDelete = null;
+            }, 300);
+        }
+
+        document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+        
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            if (mealIdToDelete) {
+                deleteMeal(mealIdToDelete);
+                closeDeleteModal();
+            }
+        });
+
+        function populateFormForEdit(meal) {
+            document.getElementById('modalTitle').innerText = 'Edit Data';
+            document.getElementById('mealId').value = meal.id;
+            document.getElementById('mealName').value = meal.name;
+            document.getElementById('mealCategory').value = meal.category;
+            document.getElementById('mealLocation').value = meal.location || '';
+            document.getElementById('mealPrice').value = meal.price || '';
+            document.getElementById('mealRating').value = meal.rating || '';
+            
+            if (meal.date) {
+                document.getElementById('mealDate').value = meal.date;
+            } else if (meal.createdAt) {
+                const d = new Date(meal.createdAt);
+                document.getElementById('mealDate').value = d.toISOString().split('T')[0];
+            }
+            
+            document.getElementById('mealDesc').value = meal.description || '';
+            document.getElementById('mealFav').checked = meal.isFavorite;
+
+            const preview = document.getElementById('previewImg');
+            const placeholder = document.getElementById('uploadPlaceholder');
+            const overlay = document.getElementById('changeImgOverlay');
+            
+            // UPDATE STATE UNTUK EDIT
+            selectedImageFile = null; 
+
+            if (meal.imageUrl && !meal.imageUrl.includes('placehold.co')) {
+                preview.src = meal.imageUrl;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                
+                existingImageUrl = meal.imageUrl; // Simpan URL lama
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                
+                existingImageUrl = '';
+            }
+            
+            openModal('mealModal');
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('bg-primary', 'text-white', 'dark:bg-primaryDark', 'shadow-lg', 'shadow-primary/30');
+                    b.classList.add('bg-white', 'text-stone-600', 'dark:bg-cardDark', 'dark:text-stone-300');
+                });
+                
+                const target = e.currentTarget;
+                target.classList.remove('bg-white', 'text-stone-600', 'dark:bg-cardDark', 'dark:text-stone-300');
+                target.classList.add('bg-primary', 'text-white', 'dark:bg-primaryDark', 'shadow-lg', 'shadow-primary/30');
+                
+                // Trigger animasi gelembung
+                target.classList.remove('bubble-pop');
+                void target.offsetWidth; // trigger reflow
+                target.classList.add('bubble-pop');
+
+                currentFilter = target.dataset.filter;
+                
+                const titles = {
+                    all: 'Jurnal Kamu', favorites: 'Momen Favorit', breakfast: 'Menu Sarapan',
+                    lunch: 'Menu Makan Siang', dinner: 'Menu Makan Malam', snack: 'Cemilan & Snack', drinks: 'Minuman'
+                };
+                document.getElementById('feedTitle').innerText = titles[currentFilter];
+
+                renderMeals();
+            });
+        });
+
+        function handleSearch(e) {
+            searchQuery = e.target.value;
+            renderMeals();
+        }
+        document.getElementById('searchInput').addEventListener('input', handleSearch);
+        document.getElementById('mobileSearchInput').addEventListener('input', handleSearch);
+
+        // ==========================================
+        // AUTOCOMPLETE LOKASI ALAMAT (NOMINATIM)
+        // ==========================================
+        const mealLocationInput = document.getElementById('mealLocation');
+        const locationSuggestions = document.getElementById('locationSuggestions');
+        let locTimeout = null;
+
+        mealLocationInput.addEventListener('input', (e) => {
+            clearTimeout(locTimeout);
+            const query = e.target.value;
+            
+            // Minimal 4 karakter untuk menghindari spam pencarian
+            if (query.trim().length < 3) {
+                locationSuggestions.classList.add('hidden');
+                return;
+            }
+            
+            // Berikan jeda waktu (debounce 800ms) sebelum memanggil API OpenStreetMap
+            locTimeout = setTimeout(async () => {
+                try {
+                    // Tambahkan countrycodes=id dan viewbox Kendari agar hasil pencarian memprioritaskan area Kendari / Indonesia
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&countrycodes=id&viewbox=122.3,-3.8,122.7,-4.1&q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    
+                    locationSuggestions.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer border-b border-stone-100 dark:border-stone-700/50 last:border-0 flex items-start gap-2 transition';
+                            
+                            // Ambil nama yang lebih relevan jika ada
+                            let shortName = item.display_name;
+                            if(item.address) {
+                                const ad = item.address;
+                                const poi = ad.amenity || ad.shop || ad.building || ad.road;
+                                const area = ad.suburb || ad.village || ad.city_district;
+                                const parts = [poi, area, ad.city || ad.town].filter(Boolean);
+                                if(parts.length > 0) shortName = parts.join(', ');
+                            }
+
+                            li.innerHTML = `<i class="fa-solid fa-location-dot text-primary mt-0.5"></i> <div class="flex flex-col"><span class="font-medium leading-tight text-stone-800 dark:text-stone-200">${shortName}</span><span class="text-xs text-stone-500 mt-1 line-clamp-1">${item.display_name}</span></div>`;
+                            li.onclick = () => {
+                                // Gunakan nama pendek jika tersedia, atau nama aslinya untuk input
+                                mealLocationInput.value = shortName;
+                                locationSuggestions.classList.add('hidden');
+                            };
+                            locationSuggestions.appendChild(li);
+                        });
+                    }
+                    
+                    // SELALU tambahkan opsi "Gunakan teks ini" agar user bisa input nama tempat yang tidak terdaftar di OSM (Misal: Warung kecil)
+                    const fallbackLi = document.createElement('li');
+                    fallbackLi.className = 'px-4 py-3 bg-primary/5 hover:bg-primary/10 dark:bg-primaryDark/20 dark:hover:bg-primaryDark/30 cursor-pointer border-t border-primary/20 flex items-center gap-2 transition text-primaryDark dark:text-primary font-medium';
+                    fallbackLi.innerHTML = `<i class="fa-solid fa-pen-clip"></i> Gunakan "${query}"`;
+                    fallbackLi.onclick = () => {
+                        mealLocationInput.value = query;
+                        locationSuggestions.classList.add('hidden');
+                    };
+                    locationSuggestions.appendChild(fallbackLi);
+                    
+                    locationSuggestions.classList.remove('hidden');
+                    
+                } catch (err) {
+                    console.error("Geocoding fetch error:", err);
+                }
+            }, 800);
+        });
+
+        // Sembunyikan rekomendasi dropdown jika pengguna klik di luar area
+        document.addEventListener('click', (e) => {
+            if (!mealLocationInput.contains(e.target) && !locationSuggestions.contains(e.target)) {
+                locationSuggestions.classList.add('hidden');
+            }
+        });
+
+        // ==========================================
+        // FITUR PETA (LEAFLET)
+        // ==========================================
+        let map = null;
+        let mapMarker = null;
+        let tempAddress = '';
+
+        document.getElementById('openMapBtn').addEventListener('click', () => {
+            openModal('mapModal');
+            setTimeout(() => {
+                if (!map) {
+                    // Default titik awal ke Kendari
+                    map = L.map('mapContainer').setView([-3.9952, 122.5132], 13);
+                    
+                    // Menggunakan tile layer Google Maps mode Hybrid (Satelit + Label/Nama Tempat)
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
+                        attribution: '© Google Maps',
+                        maxZoom: 20
+                    }).addTo(map);
+
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                            map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+                        }, () => { console.log("Geolocation ditolak atau gagal."); });
+                    }
+
+                    map.on('click', async function(e) {
+                        if (mapMarker) mapMarker.setLatLng(e.latlng);
+                        else mapMarker = L.marker(e.latlng).addTo(map);
+
+                        document.getElementById('selectedAddressText').innerText = "Mencari alamat detail...";
+                        try {
+                            // Mengubah zoom=16 agar hanya mencari level jalan/area, bukan spesifik ke nama warung/bangunan
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=16&addressdetails=1`);
+                            const data = await res.json();
+                            
+                            // Gunakan alamat bawaan dari Maps
+                            let addressStr = data.display_name;
+                            
+                            // Persingkat alamat agar tidak terlalu panjang (ambil 3 bagian pertama: Jalan, Kelurahan, Kota)
+                            if (addressStr && addressStr.includes(',')) {
+                                const parts = addressStr.split(',');
+                                if (parts.length > 3) {
+                                    addressStr = parts.slice(0, 3).join(',').trim();
+                                }
+                            }
+                            
+                            tempAddress = addressStr || `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                            document.getElementById('selectedAddressText').innerText = tempAddress;
+                        } catch(err) {
+                            tempAddress = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                            document.getElementById('selectedAddressText').innerText = tempAddress;
+                        }
+                    });
+                } else {
+                    map.invalidateSize();
+                }
+            }, 300);
+        });
+
+        document.getElementById('closeMapBtn').addEventListener('click', () => closeModal('mapModal'));
+        document.getElementById('confirmLocationBtn').addEventListener('click', () => {
+            if (tempAddress) document.getElementById('mealLocation').value = tempAddress;
+            closeModal('mapModal');
+        });
+
+        // ==========================================
+        // FITUR REKAP MAKANAN
+        // ==========================================
+        document.getElementById('recapBtn').addEventListener('click', () => {
+            if (!meals || meals.length === 0) return showToast('Belum ada data untuk direkap', 'error');
+
+            const total = meals.length;
+            const favs = meals.filter(m => m.isFavorite).length;
+            const catCounts = {};
+            meals.forEach(m => { catCounts[m.category] = (catCounts[m.category] || 0) + 1; });
+            const mostCat = Object.keys(catCounts).reduce((a, b) => catCounts[a] > catCounts[b] ? a : b);
+
+            document.getElementById('recapTotal').innerText = total;
+            document.getElementById('recapFavs').innerText = favs;
+            document.getElementById('recapMost').innerText = mostCat;
+
+            openModal('recapModal');
+        });
+
+        document.getElementById('closeRecapBtn').addEventListener('click', () => closeModal('recapModal'));
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMsg');
+            const icon = document.getElementById('toastIcon');
+            
+            msgEl.innerText = message;
+            if (type === 'error') {
+                icon.className = 'fa-solid fa-circle-xmark text-red-400';
+            } else {
+                icon.className = 'fa-solid fa-circle-check text-green-400';
+            }
+
+            toast.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-10'); }, 3000);
+        }
+
     </script>
-  </body>
+</body>
 </html>
